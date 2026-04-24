@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 391ed0bc6cf2db94baafdd77be0badf7, type: 3}
+  m_Name: Machine Gun
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  maxAmmo: 45
+  weaponName: Machine Gun
+  damage: 1
+  fireRate: 5
+  range: 12
+  isAutomatic: 1
+  hitVFXPrefab: {fileID: 6384943288997290252, guid: 6334c833b6afca84f93facbbc3fd6db6, type: 3}
+  shakeIntensity: -0.005
