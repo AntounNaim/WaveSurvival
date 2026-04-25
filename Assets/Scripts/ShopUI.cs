@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using StarterAssets;
 
 public class ShopUI : MonoBehaviour
 {
@@ -8,7 +9,7 @@ public class ShopUI : MonoBehaviour
     [SerializeField] private GameObject shopPanel;
     [SerializeField] private TextMeshProUGUI playerScoreText;
     [SerializeField] private TextMeshProUGUI waveText;
-    [SerializeField] private WaveManager waveManager;
+    [SerializeField] private Button closeButton;
     
     [Header("Upgrade Buttons")]
     [SerializeField] private Button healButton;
@@ -24,27 +25,80 @@ public class ShopUI : MonoBehaviour
     [SerializeField] private int damageCost = 300;
     [SerializeField] private int damageIncrease = 5;
     
-    private Weapon currentWeapon;
     private int currentDamageBonus = 0;
+    private bool isOpen = false;
+    
+    // References to player components to disable
+    private FirstPersonController playerController;
+    private ActiveWeapon activeWeapon;
+    private WeaponSwitcher weaponSwitcher;
+    
+    public bool IsOpen => isOpen;
     
     private void Start()
     {
         shopPanel.SetActive(false);
         
+        // Find player components
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            playerController = player.GetComponent<FirstPersonController>();
+            activeWeapon = player.GetComponentInChildren<ActiveWeapon>();
+            weaponSwitcher = player.GetComponentInChildren<WeaponSwitcher>();
+        }
+        
         healButton.onClick.AddListener(BuyHeal);
         ammoButton.onClick.AddListener(BuyAmmo);
         damageButton.onClick.AddListener(BuyDamage);
+        closeButton.onClick.AddListener(CloseShop);
     }
     
     public void OpenShop(int waveNumber)
     {
+        isOpen = true;
         shopPanel.SetActive(true);
         UpdateUI(waveNumber);
+        
+        // Freeze time
+        Time.timeScale = 0f;
+        
+        // Disable player input
+        if (playerController != null)
+            playerController.enabled = false;
+        
+        if (activeWeapon != null)
+            activeWeapon.enabled = false;
+        
+        if (weaponSwitcher != null)
+            weaponSwitcher.enabled = false;
+        
+        // Show and unlock cursor
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
     
     public void CloseShop()
     {
+        isOpen = false;
         shopPanel.SetActive(false);
+        
+        // Resume time
+        Time.timeScale = 1f;
+        
+        // Re-enable player input
+        if (playerController != null)
+            playerController.enabled = true;
+        
+        if (activeWeapon != null)
+            activeWeapon.enabled = true;
+        
+        if (weaponSwitcher != null)
+            weaponSwitcher.enabled = true;
+        
+        // Lock cursor back to game
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
     
     private void UpdateUI(int waveNumber)
@@ -64,7 +118,6 @@ public class ShopUI : MonoBehaviour
         if (damageCostText != null)
             damageCostText.text = damageCost.ToString();
         
-        // Update button interactability
         if (ScoreManager.Instance != null)
         {
             int currentScore = ScoreManager.Instance.CurrentScore;
@@ -81,11 +134,7 @@ public class ShopUI : MonoBehaviour
             ScoreManager.Instance.AddScore(-healCost);
             PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
             playerHealth?.HealFull();
-            
-            if (waveManager != null)
-                UpdateUI(waveManager.CurrentWave - 1);
-            else
-                UpdateUI(1);
+            UpdateUI(WaveManager.Instance.CurrentWave - 1);
         }
     }
     
@@ -99,11 +148,7 @@ public class ShopUI : MonoBehaviour
             {
                 activeWeapon.CurrentWeapon.RefillAmmo();
             }
-            
-            if (waveManager != null)
-                UpdateUI(waveManager.CurrentWave - 1);
-            else
-                UpdateUI(1);
+            UpdateUI(WaveManager.Instance.CurrentWave - 1);
         }
     }
     
@@ -113,19 +158,8 @@ public class ShopUI : MonoBehaviour
         {
             ScoreManager.Instance.AddScore(-damageCost);
             currentDamageBonus += damageIncrease;
-            
-            // Apply damage buff to weapon
-            ActiveWeapon activeWeapon = FindFirstObjectByType<ActiveWeapon>();
-            if (activeWeapon != null && activeWeapon.CurrentWeapon != null)
-            {
-                // You'll need to add a damage buff system to Weapon
-                Debug.Log($"Damage increased by {damageIncrease}! Total bonus: {currentDamageBonus}");
-            }
-            
-            if (waveManager != null)
-                UpdateUI(waveManager.CurrentWave - 1);
-            else
-                UpdateUI(1);
+            Debug.Log($"Damage increased by {damageIncrease}! Total bonus: {currentDamageBonus}");
+            UpdateUI(WaveManager.Instance.CurrentWave - 1);
         }
     }
 }

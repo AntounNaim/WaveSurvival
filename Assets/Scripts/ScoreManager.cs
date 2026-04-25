@@ -33,6 +33,7 @@ public class ScoreManager : MonoBehaviour
     
     private void Start()
     {
+        currentScore = 1000;//temp
         UpdateScoreUI();
     }
     

@@ -13,10 +13,28 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private int currentWave = 1;
     [SerializeField] private float timeBetweenWaves = 10f;
     
+    [Header("Shop")]
+    [SerializeField] private ShopUI shopUI;
+    [SerializeField] private GameObject overlayPanel;
+    
     private bool isWaveActive = false;
+    
+    public static WaveManager Instance { get; private set; }
     
     public int CurrentWave => currentWave;
     public bool IsWaveActive => isWaveActive;
+    
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
     
     private void Start()
     {
@@ -27,8 +45,27 @@ public class WaveManager : MonoBehaviour
     {
         while (true)
         {
-            // Between waves
-            yield return StartCoroutine(ShowWaveCountdown());
+            // Open shop between waves (skip before first wave)
+            if (shopUI != null && currentWave > 1)
+            {
+                // Show countdown BEFORE disabling overlay
+                yield return StartCoroutine(ShowPreShopCountdown());
+                
+                // Now disable overlay
+                if (overlayPanel != null)
+                    overlayPanel.SetActive(false);
+                
+                // Open shop
+                shopUI.OpenShop(currentWave);
+                yield return new WaitWhile(() => shopUI.IsOpen);
+                
+                // Re-enable overlay after shop closes
+                if (overlayPanel != null)
+                    overlayPanel.SetActive(true);
+            }
+            
+            // Show countdown before wave
+            yield return StartCoroutine(ShowPreWaveCountdown());
             
             // Start wave
             yield return StartCoroutine(StartWave());
@@ -40,7 +77,27 @@ public class WaveManager : MonoBehaviour
         }
     }
     
-    private IEnumerator ShowWaveCountdown()
+    private IEnumerator ShowPreShopCountdown()
+    {
+        float countdown = 3f;
+        
+        while (countdown > 0)
+        {
+            if (waveCountdownText != null)
+            {
+                waveCountdownText.text = $"Shop in: {Mathf.CeilToInt(countdown)}";
+            }
+            countdown -= Time.deltaTime;
+            yield return null;
+        }
+        
+        if (waveCountdownText != null)
+        {
+            waveCountdownText.text = "";
+        }
+    }
+    
+    private IEnumerator ShowPreWaveCountdown()
     {
         float countdown = timeBetweenWaves;
         
@@ -105,19 +162,5 @@ public class WaveManager : MonoBehaviour
         // Base enemies: 5 + (wave * 2), capped at 30
         int baseEnemies = 5 + (currentWave - 1) * 2;
         return Mathf.Min(baseEnemies, 30);
-    }
-
-    public static WaveManager Instance { get; private set; }
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
     }
 }
