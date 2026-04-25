@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponData
   maxAmmo: 16
   weaponName: Pistol
-  damage: 2
+  damage: 1
   range: 15
   isAutomatic: 0
   fireRate: 100

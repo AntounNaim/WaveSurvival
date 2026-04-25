@@ -4,7 +4,7 @@ using UnityEngine;
 public class EnemySpawner : MonoBehaviour
 {
     [Header("Pool Settings")]
-    [SerializeField] private EnemyHealth enemyPrefab;
+    [SerializeField] private EnemyHealth[] enemyPrefabs;
     [SerializeField] private int prewarmCount = 5;
 
     [Header("Spawn Settings")]
@@ -12,35 +12,96 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private float spawnInterval = 3f;
     [SerializeField] private int maxActiveEnemies = 10;
 
-    private ObjectPool<EnemyHealth> pool;
+    [Header("Spawn Weights")]
+    [SerializeField] private int[] spawnWeights;
+
+    private ObjectPool<EnemyHealth>[] pools;
+
+    // PUBLIC PROPERTIES - ADD THESE
+    public int ActiveEnemyCount => GetTotalActiveEnemies();
+    public int MaxActiveEnemies => maxActiveEnemies;
 
     private void Start()
     {
-        pool = new ObjectPool<EnemyHealth>(enemyPrefab, transform, prewarmCount);
-        StartCoroutine(SpawnLoop());
+        pools = new ObjectPool<EnemyHealth>[enemyPrefabs.Length];
+        for (int i = 0; i < enemyPrefabs.Length; i++)
+        {
+            pools[i] = new ObjectPool<EnemyHealth>(enemyPrefabs[i], transform, prewarmCount);
+        }
+        
+        // REMOVE the old SpawnLoop - WaveManager now handles spawning
+        // StartCoroutine(SpawnLoop());
     }
 
+    private int GetWeightedRandomIndex()
+    {
+        int totalWeight = 0;
+        foreach (int weight in spawnWeights)
+        {
+            totalWeight += weight;
+        }
+    
+        int randomValue = Random.Range(0, totalWeight);
+    
+        int cumulativeWeight = 0;
+        for (int i = 0; i < spawnWeights.Length; i++)
+        {
+            cumulativeWeight += spawnWeights[i];
+            if (randomValue < cumulativeWeight)
+            {
+                return i;
+            }
+        }   
+    
+        return 0;
+    }
+
+    // REMOVE the old SpawnLoop
+    /*
     private IEnumerator SpawnLoop()
     {
         while (true)
         {
             yield return new WaitForSeconds(spawnInterval);
-
-            if (pool.CountActive < maxActiveEnemies && spawnPoints.Length > 0)
+            if (GetTotalActiveEnemies() < maxActiveEnemies && spawnPoints.Length > 0)
                 SpawnEnemy();
         }
     }
+    */
 
-    private void SpawnEnemy()
+    private int GetTotalActiveEnemies()
     {
+        int total = 0;
+        foreach (var pool in pools)
+        {
+            if (pool != null)
+                total += pool.CountActive;
+        }
+        return total;
+    }
+
+    // MAKE THIS PUBLIC
+    public void SpawnEnemy()
+    {
+        if (spawnPoints.Length == 0) return;
+        
         Transform point = spawnPoints[Random.Range(0, spawnPoints.Length)];
-        EnemyHealth enemy = pool.Get(point.position, point.rotation);
+        int enemyIndex = GetWeightedRandomIndex();
+        EnemyHealth enemy = pools[enemyIndex].Get(point.position, point.rotation);
         enemy.OnDied += HandleEnemyDied;
     }
 
     private void HandleEnemyDied(EnemyHealth enemy)
     {
         enemy.OnDied -= HandleEnemyDied;
-        pool.Return(enemy);
+        
+        for (int i = 0; i < pools.Length; i++)
+        {
+            if (pools[i].Contains(enemy))
+            {
+                pools[i].Return(enemy);
+                break;
+            }
+        }
     }
 }

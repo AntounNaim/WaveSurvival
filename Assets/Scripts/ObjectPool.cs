@@ -72,4 +72,8 @@ public class ObjectPool<T> where T : Component, IPoolable
         T instance = Object.Instantiate(prefab, parent);
         return instance;
     }
+    public bool Contains(T instance)
+    {
+        return active.Contains(instance);
+    }
 }
