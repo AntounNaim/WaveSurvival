@@ -11,7 +11,7 @@ public class ScoreManager : MonoBehaviour
     [Header("HUD")]
     [SerializeField] private TextMeshProUGUI scoreText;
     
-    [Header("Combo Settings (Optional)")]
+    [Header("Combo Settings")]
     [SerializeField] private float comboDuration = 3f;
     private int currentCombo = 0;
     private float lastKillTime;
@@ -33,15 +33,32 @@ public class ScoreManager : MonoBehaviour
     
     private void Start()
     {
-        currentScore = 1000;//temp
+        currentScore = 0;
         UpdateScoreUI();
     }
     
-    public void AddScore(int amount)
+    // For purchases and deductions (NO combo multiplier)
+    public void DeductScore(int amount)
     {
-        // Apply combo multiplier (combo 5 = x1.5, combo 10 = x2, etc.)
+        currentScore -= amount;
+        
+        if (currentScore < 0)
+        {
+            Debug.LogWarning($"Score went negative ({currentScore}), clamping to 0");
+            currentScore = 0;
+        }
+        
+        UpdateScoreUI();
+        Debug.Log($"Score deducted: -{amount}. New score: {currentScore}");
+    }
+    
+    // For kills and score pickups (WITH combo multiplier)
+    public void AddScore(int amount, Vector3 position)
+    {
         int multiplier = 1;
-        if (currentCombo >= 10)
+        if (currentCombo >= 20)
+            multiplier = 3;
+        else if (currentCombo >= 10)
             multiplier = 2;
         else if (currentCombo >= 5)
             multiplier = 1;
@@ -49,13 +66,29 @@ public class ScoreManager : MonoBehaviour
         int finalAmount = amount * multiplier;
         currentScore += finalAmount;
         
-        Debug.Log($"Score +{finalAmount} (Base: {amount}, Combo: x{multiplier})");
+        int highScore = PlayerPrefs.GetInt("HighScore", 0);
+        if (currentScore > highScore)
+        {
+            PlayerPrefs.SetInt("HighScore", currentScore);
+            PlayerPrefs.Save();
+        }
         
         UpdateScoreUI();
         
-        // Update combo
+        if (FloatingTextManager.Instance != null)
+        {
+            string multiplierText = multiplier > 1 ? $" x{multiplier}!" : "";
+            FloatingTextManager.Instance.ShowFloatingText($"+{finalAmount}{multiplierText}", position, Color.yellow);
+        }
+        
         currentCombo++;
         lastKillTime = Time.time;
+    }
+    
+    // Simple version for loot pickups that don't need position
+    public void AddScore(int amount)
+    {
+        AddScore(amount, Vector3.zero);
     }
     
     public void ResetCombo()
@@ -65,7 +98,6 @@ public class ScoreManager : MonoBehaviour
     
     private void Update()
     {
-        // Reset combo if no kills for comboDuration seconds
         if (currentCombo > 0 && Time.time > lastKillTime + comboDuration)
         {
             ResetCombo();
@@ -78,7 +110,6 @@ public class ScoreManager : MonoBehaviour
         {
             scoreText.text = $"Score: {currentScore}";
             
-            // Optional: Show combo
             if (currentCombo > 1)
             {
                 scoreText.text += $"  x{currentCombo}";

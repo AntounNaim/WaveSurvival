@@ -61,7 +61,20 @@ public class ActiveWeapon : MonoBehaviour
             out hit, weaponData.range))
         {
             EnemyHealth health = hit.collider.GetComponent<EnemyHealth>();
-            health?.TakeDamage(weaponData.damage);
+            
+            int totalDamage = weaponData.damage;
+            if (UpgradeManager.Instance != null)
+                totalDamage += UpgradeManager.Instance.GetDamageBonus();
+            
+            bool willKill = health != null && health.CurrentHealth <= totalDamage;
+            
+            health?.TakeDamage(totalDamage);
+            
+            if (HitMarker.Instance != null)
+            {
+                HitMarker.Instance.ShowHitMarker(willKill);
+            }
+            
             Instantiate(weaponData.hitVFXPrefab, hit.point, Quaternion.identity);
         }
     }

@@ -19,19 +19,18 @@ public class ShopUI : MonoBehaviour
     [SerializeField] private Button damageButton;
     [SerializeField] private TextMeshProUGUI damageCostText;
     
-    [Header("Upgrade Settings")]
-    [SerializeField] private int healCost = 200;
-    [SerializeField] private int ammoCost = 150;
-    [SerializeField] private int damageCost = 300;
-    [SerializeField] private int damageIncrease = 5;
+    [Header("References")]
+    [SerializeField] private UpgradeManager upgradeManager;
     
-    private int currentDamageBonus = 0;
-    private bool isOpen = false;
+    // Store the actual upgrade data for each button
+    private ShopUpgrade healUpgrade;
+    private ShopUpgrade ammoUpgrade;
+    private ShopUpgrade damageUpgrade;
     
-    // References to player components to disable
     private FirstPersonController playerController;
     private ActiveWeapon activeWeapon;
     private WeaponSwitcher weaponSwitcher;
+    private bool isOpen = false;
     
     public bool IsOpen => isOpen;
     
@@ -48,10 +47,35 @@ public class ShopUI : MonoBehaviour
             weaponSwitcher = player.GetComponentInChildren<WeaponSwitcher>();
         }
         
-        healButton.onClick.AddListener(BuyHeal);
-        ammoButton.onClick.AddListener(BuyAmmo);
-        damageButton.onClick.AddListener(BuyDamage);
+        // Find upgrades from UpgradeManager
+        FindUpgrades();
+        
+        healButton.onClick.AddListener(() => PurchaseUpgrade(healUpgrade, healButton));
+        ammoButton.onClick.AddListener(() => PurchaseUpgrade(ammoUpgrade, ammoButton));
+        damageButton.onClick.AddListener(() => PurchaseUpgrade(damageUpgrade, damageButton));
         closeButton.onClick.AddListener(CloseShop);
+    }
+    
+    private void FindUpgrades()
+    {
+        // Find the upgrades by type
+        ShopUpgrade[] allUpgrades = upgradeManager.GetAllUpgrades();
+        
+        foreach (ShopUpgrade upgrade in allUpgrades)
+        {
+            switch (upgrade.upgradeType)
+            {
+                case ShopUpgrade.UpgradeType.Heal:
+                    healUpgrade = upgrade;
+                    break;
+                case ShopUpgrade.UpgradeType.IncreaseAmmoCapacity:
+                    ammoUpgrade = upgrade;
+                    break;
+                case ShopUpgrade.UpgradeType.IncreaseDamage:
+                    damageUpgrade = upgrade;
+                    break;
+            }
+        }
     }
     
     public void OpenShop(int waveNumber)
@@ -66,14 +90,11 @@ public class ShopUI : MonoBehaviour
         // Disable player input
         if (playerController != null)
             playerController.enabled = false;
-        
         if (activeWeapon != null)
             activeWeapon.enabled = false;
-        
         if (weaponSwitcher != null)
             weaponSwitcher.enabled = false;
         
-        // Show and unlock cursor
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
@@ -83,20 +104,15 @@ public class ShopUI : MonoBehaviour
         isOpen = false;
         shopPanel.SetActive(false);
         
-        // Resume time
         Time.timeScale = 1f;
         
-        // Re-enable player input
         if (playerController != null)
             playerController.enabled = true;
-        
         if (activeWeapon != null)
             activeWeapon.enabled = true;
-        
         if (weaponSwitcher != null)
             weaponSwitcher.enabled = true;
         
-        // Lock cursor back to game
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -109,57 +125,64 @@ public class ShopUI : MonoBehaviour
         if (playerScoreText != null && ScoreManager.Instance != null)
             playerScoreText.text = $"Score: {ScoreManager.Instance.CurrentScore}";
         
-        if (healCostText != null)
-            healCostText.text = healCost.ToString();
-        
-        if (ammoCostText != null)
-            ammoCostText.text = ammoCost.ToString();
-        
-        if (damageCostText != null)
-            damageCostText.text = damageCost.ToString();
-        
-        if (ScoreManager.Instance != null)
+        // Update heal button
+        if (healUpgrade != null)
         {
-            int currentScore = ScoreManager.Instance.CurrentScore;
-            healButton.interactable = currentScore >= healCost;
-            ammoButton.interactable = currentScore >= ammoCost;
-            damageButton.interactable = currentScore >= damageCost;
+            int purchases = upgradeManager.GetPurchaseCount(healUpgrade);
+            int maxPurchases = healUpgrade.maxPurchases;
+            bool isMaxed = purchases >= maxPurchases;
+            int cost = upgradeManager.GetUpgradeCost(healUpgrade);
+            
+            if (healCostText != null)
+                healCostText.text = isMaxed ? "MAX" : cost.ToString();
+            
+            healButton.interactable = !isMaxed && ScoreManager.Instance.CurrentScore >= cost;
+        }
+        
+        // Update ammo button
+        if (ammoUpgrade != null)
+        {
+            int purchases = upgradeManager.GetPurchaseCount(ammoUpgrade);
+            int maxPurchases = ammoUpgrade.maxPurchases;
+            bool isMaxed = purchases >= maxPurchases;
+            int cost = upgradeManager.GetUpgradeCost(ammoUpgrade);
+            
+            if (ammoCostText != null)
+                ammoCostText.text = isMaxed ? "MAX" : cost.ToString();
+            
+            ammoButton.interactable = !isMaxed && ScoreManager.Instance.CurrentScore >= cost;
+        }
+        
+        // Update damage button
+        if (damageUpgrade != null)
+        {
+            int purchases = upgradeManager.GetPurchaseCount(damageUpgrade);
+            int maxPurchases = damageUpgrade.maxPurchases;
+            bool isMaxed = purchases >= maxPurchases;
+            int cost = upgradeManager.GetUpgradeCost(damageUpgrade);
+            int nextIncrease = upgradeManager.GetNextDamageIncrease();
+            
+            if (damageCostText != null)
+                damageCostText.text = isMaxed ? "MAX" : $"{cost} (+{nextIncrease})";
+            
+            damageButton.interactable = !isMaxed && ScoreManager.Instance.CurrentScore >= cost;
         }
     }
     
-    private void BuyHeal()
-    {
-        if (ScoreManager.Instance != null && ScoreManager.Instance.CurrentScore >= healCost)
-        {
-            ScoreManager.Instance.AddScore(-healCost);
-            PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
-            playerHealth?.HealFull();
-            UpdateUI(WaveManager.Instance.CurrentWave - 1);
-        }
-    }
+    private void PurchaseUpgrade(ShopUpgrade upgrade, Button button)
+{
+    if (upgrade == null) return;
     
-    private void BuyAmmo()
+    // Let UpgradeManager handle the cost check AND deduction
+    if (upgradeManager.PurchaseUpgrade(upgrade))
     {
-        if (ScoreManager.Instance != null && ScoreManager.Instance.CurrentScore >= ammoCost)
-        {
-            ScoreManager.Instance.AddScore(-ammoCost);
-            ActiveWeapon activeWeapon = FindFirstObjectByType<ActiveWeapon>();
-            if (activeWeapon != null && activeWeapon.CurrentWeapon != null)
-            {
-                activeWeapon.CurrentWeapon.RefillAmmo();
-            }
-            UpdateUI(WaveManager.Instance.CurrentWave - 1);
-        }
+        UpdateUI(WaveManager.Instance.CurrentWave - 1);
+        Debug.Log($"Purchased {upgrade.upgradeName}!");
     }
+    else
+    {
+        Debug.Log("Cannot afford upgrade or already maxed!");
+    }
+}   
     
-    private void BuyDamage()
-    {
-        if (ScoreManager.Instance != null && ScoreManager.Instance.CurrentScore >= damageCost)
-        {
-            ScoreManager.Instance.AddScore(-damageCost);
-            currentDamageBonus += damageIncrease;
-            Debug.Log($"Damage increased by {damageIncrease}! Total bonus: {currentDamageBonus}");
-            UpdateUI(WaveManager.Instance.CurrentWave - 1);
-        }
-    }
 }

@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class WeaponUI : MonoBehaviour
 {
-
     [SerializeField] ActiveWeapon activeWeapon;
     [SerializeField] TextMeshProUGUI ammoText;
     [SerializeField] TextMeshProUGUI weaponNameText;
@@ -19,6 +18,7 @@ public class WeaponUI : MonoBehaviour
         }
 
         weaponNameText.text = weapon.Data.weaponName;
-        ammoText.text = $"{weapon.CurrentAmmo} / {weapon.Data.maxAmmo}";
+        // Use runtime current ammo and runtime max ammo instead of ScriptableObject values
+        ammoText.text = $"{weapon.CurrentAmmo} / {weapon.GetMaxAmmo()}";
     }
 }

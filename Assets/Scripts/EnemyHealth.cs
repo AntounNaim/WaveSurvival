@@ -13,6 +13,7 @@ public class EnemyHealth : MonoBehaviour, IPoolable
 
     public event Action<EnemyHealth> OnDied;
     public EnemyData Data => enemyData;
+    public int CurrentHealth => currentHealth;
 
     private void Awake()
     {
@@ -46,10 +47,8 @@ public class EnemyHealth : MonoBehaviour, IPoolable
             return;
         }
 
-        // Check distance to player
         float distance = Vector3.Distance(transform.position, player.position);
         
-        // If within attack range
         if (distance <= 1.5f)
         {
             if (Time.time >= lastAttackTime + enemyData.attackCooldown)
@@ -78,7 +77,16 @@ public class EnemyHealth : MonoBehaviour, IPoolable
             return;
         }
         
-        currentHealth = enemyData.maxHealth;
+        // Apply wave scaling if WaveManager exists
+        if (WaveManager.Instance != null)
+        {
+            float multiplier = WaveManager.Instance.GetHealthMultiplier();
+            currentHealth = Mathf.RoundToInt(enemyData.maxHealth * multiplier);
+        }
+        else
+        {
+            currentHealth = enemyData.maxHealth;
+        }
         
         if (agent != null)
         {
@@ -99,7 +107,7 @@ public class EnemyHealth : MonoBehaviour, IPoolable
         if (currentHealth <= 0) return;
         
         currentHealth -= damage;
-        Debug.Log($"{gameObject.name} took {damage} damage! Health: {currentHealth}/{enemyData.maxHealth}");
+        Debug.Log($"{gameObject.name} took {damage} damage! Health: {currentHealth}");
         
         if (enemyRenderer != null)
         {
@@ -124,10 +132,17 @@ public class EnemyHealth : MonoBehaviour, IPoolable
     private void Die()
     {
         Debug.Log($"{gameObject.name} died!");
+        
         if(ScoreManager.Instance != null && enemyData != null)
         {
-            ScoreManager.Instance.AddScore(enemyData.scoreValue);
+            ScoreManager.Instance.AddScore(enemyData.scoreValue, transform.position);
         }
+        
+        if (LootDropManager.Instance != null)
+        {
+            LootDropManager.Instance.TryDropLoot(transform.position);
+        }
+        
         OnDied?.Invoke(this);
         gameObject.SetActive(false);
     }

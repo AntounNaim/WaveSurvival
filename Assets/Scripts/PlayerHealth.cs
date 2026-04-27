@@ -51,10 +51,28 @@ public class PlayerHealth : MonoBehaviour
     }
     
     public void Heal(int amount)
+{
+    if (!IsAlive) return;
+    
+    int oldHealth = currentHealth;
+    currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+    
+    if (currentHealth > oldHealth)
     {
-        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
         UpdateHealthUI();
-        Debug.Log($"Player healed! Health: {currentHealth}/{maxHealth}");
+        Debug.Log($"Player healed from {oldHealth} to {currentHealth}/{maxHealth}");
+    }
+    else
+    {
+        Debug.Log($"Player at full health ({currentHealth}/{maxHealth}) - no healing needed");
+    }
+}
+    
+    public void HealFull()
+    {
+        currentHealth = maxHealth;
+        UpdateHealthUI();
+        Debug.Log($"Player fully healed! Health: {currentHealth}/{maxHealth}");
     }
     
     private void UpdateHealthUI()
@@ -82,6 +100,8 @@ public class PlayerHealth : MonoBehaviour
         ActiveWeapon activeWeapon = GetComponentInChildren<ActiveWeapon>();
         if (activeWeapon != null)
             activeWeapon.enabled = false;
+        
+        GameManager.Instance?.GameOver();
     }
     
     public void ResetHealth()
@@ -90,12 +110,4 @@ public class PlayerHealth : MonoBehaviour
         UpdateHealthUI();
         isInvincible = false;
     }
-
-    public void HealFull()
-    {
-        currentHealth = maxHealth;
-        UpdateHealthUI();
-        Debug.Log($"Player fully healed! Health: {currentHealth}/{maxHealth}");
-    }
-
 }

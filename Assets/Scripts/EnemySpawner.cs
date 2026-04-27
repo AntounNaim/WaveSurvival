@@ -17,7 +17,6 @@ public class EnemySpawner : MonoBehaviour
 
     private ObjectPool<EnemyHealth>[] pools;
 
-    // PUBLIC PROPERTIES - ADD THESE
     public int ActiveEnemyCount => GetTotalActiveEnemies();
     public int MaxActiveEnemies => maxActiveEnemies;
 
@@ -28,9 +27,6 @@ public class EnemySpawner : MonoBehaviour
         {
             pools[i] = new ObjectPool<EnemyHealth>(enemyPrefabs[i], transform, prewarmCount);
         }
-        
-        // REMOVE the old SpawnLoop - WaveManager now handles spawning
-        // StartCoroutine(SpawnLoop());
     }
 
     private int GetWeightedRandomIndex()
@@ -56,19 +52,6 @@ public class EnemySpawner : MonoBehaviour
         return 0;
     }
 
-    // REMOVE the old SpawnLoop
-    /*
-    private IEnumerator SpawnLoop()
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(spawnInterval);
-            if (GetTotalActiveEnemies() < maxActiveEnemies && spawnPoints.Length > 0)
-                SpawnEnemy();
-        }
-    }
-    */
-
     private int GetTotalActiveEnemies()
     {
         int total = 0;
@@ -80,7 +63,6 @@ public class EnemySpawner : MonoBehaviour
         return total;
     }
 
-    // MAKE THIS PUBLIC
     public void SpawnEnemy()
     {
         if (spawnPoints.Length == 0) return;
