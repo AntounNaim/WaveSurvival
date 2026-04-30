@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LootData
   lootName: Score Gem
   lootIcon: {fileID: 0}
-  lootPrefab: {fileID: 0}
+  lootPrefab: {fileID: 2872596658775814052, guid: 10f10a39e9b42c646bbea515adfc6ac6, type: 3}
   lootType: 2
   ammoAmount: 0
   healAmount: 0

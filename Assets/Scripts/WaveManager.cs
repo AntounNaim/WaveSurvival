@@ -226,7 +226,7 @@ public class WaveManager : MonoBehaviour
         }
         
         // Wait for all enemies to die
-        yield return new WaitUntil(() => enemySpawner.ActiveEnemyCount == 0);
+        yield return new WaitUntil(() => enemySpawner.ActiveEnemyCount == 0 && !EnemyHealth.HasActiveMinions);
         
         isWaveActive = false;
         Debug.Log($"Wave {currentWave} complete!");

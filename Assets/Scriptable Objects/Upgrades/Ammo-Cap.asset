@@ -15,10 +15,10 @@ MonoBehaviour:
   upgradeName: Ammo Cap+
   description: Incease ammo capacity
   icon: {fileID: 0}
-  baseCost: 150
-  costIncreasePerPurchase: 75
+  baseCost: 400
+  costIncreasePerPurchase: 200
   upgradeType: 1
   healthAmount: 0
   ammoCapacityIncrease: 10
   baseDamageIncrease: 0
-  maxPurchases: 5
+  maxPurchases: 3

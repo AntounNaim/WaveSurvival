@@ -16,8 +16,24 @@ MonoBehaviour:
   maxHealth: 8
   damage: 30
   attackCooldown: 1.75
+  attackRange: 1.5
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 15
+  rangedAttackRange: 15
   speed: 1.7
   stoppingDistance: 1
-  scoreValue: 30
+  angularSpeed: 120
+  acceleration: 8
+  scoreValue: 40
   color: {r: 1, g: 0, b: 0, a: 1}
   scale: 1
+  isExploder: 0
+  explosionRadius: 3
+  explosionDamage: 30
+  explosionVFX: {fileID: 0}
+  detonationDistance: 2
+  isSummoner: 0
+  summonedEnemyPrefab: {fileID: 0}
+  numberOfSummons: 2
+  summonRadius: 2

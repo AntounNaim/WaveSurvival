@@ -15,8 +15,8 @@ MonoBehaviour:
   upgradeName: Damage+
   description: Increase Damage
   icon: {fileID: 0}
-  baseCost: 300
-  costIncreasePerPurchase: 50
+  baseCost: 500
+  costIncreasePerPurchase: 200
   upgradeType: 2
   healthAmount: 0
   ammoCapacityIncrease: 0

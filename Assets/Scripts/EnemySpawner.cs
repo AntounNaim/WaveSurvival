@@ -9,7 +9,6 @@ public class EnemySpawner : MonoBehaviour
 
     [Header("Spawn Settings")]
     [SerializeField] private Transform[] spawnPoints;
-    [SerializeField] private float spawnInterval = 3f;
     [SerializeField] private int maxActiveEnemies = 10;
 
     [Header("Spawn Weights")]
@@ -85,5 +84,23 @@ public class EnemySpawner : MonoBehaviour
                 break;
             }
         }
+    }
+
+        public void SpawnEnemyAtPosition(Vector3 position, int enemyTypeIndex)
+    {
+        EnemyHealth enemy = pools[enemyTypeIndex].Get(position, Quaternion.identity);
+        enemy.OnDied += HandleEnemyDied;
+    }
+
+        public int GetEnemyTypeIndex(GameObject enemyPrefab)
+    {
+        for (int i = 0; i < enemyPrefabs.Length; i++)
+        {
+            if (enemyPrefabs[i].gameObject.name == enemyPrefab.name)
+            {
+                return i;
+            }
+        }
+        return 0; // Default to first type
     }
 }

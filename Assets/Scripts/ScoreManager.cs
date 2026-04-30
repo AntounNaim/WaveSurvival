@@ -53,36 +53,17 @@ public class ScoreManager : MonoBehaviour
     }
     
     // For kills and score pickups (WITH combo multiplier)
-    public void AddScore(int amount, Vector3 position)
+        public void AddScore(int amount, Vector3 position)
     {
-        int multiplier = 1;
-        if (currentCombo >= 20)
-            multiplier = 3;
-        else if (currentCombo >= 10)
-            multiplier = 2;
-        else if (currentCombo >= 5)
-            multiplier = 1;
+        currentScore += amount;
         
-        int finalAmount = amount * multiplier;
-        currentScore += finalAmount;
-        
-        int highScore = PlayerPrefs.GetInt("HighScore", 0);
-        if (currentScore > highScore)
-        {
-            PlayerPrefs.SetInt("HighScore", currentScore);
-            PlayerPrefs.Save();
-        }
-        
+        // No combo multiplier
         UpdateScoreUI();
         
         if (FloatingTextManager.Instance != null)
         {
-            string multiplierText = multiplier > 1 ? $" x{multiplier}!" : "";
-            FloatingTextManager.Instance.ShowFloatingText($"+{finalAmount}{multiplierText}", position, Color.yellow);
+            FloatingTextManager.Instance.ShowFloatingText($"+{amount}", position, Color.yellow);
         }
-        
-        currentCombo++;
-        lastKillTime = Time.time;
     }
     
     // Simple version for loot pickups that don't need position

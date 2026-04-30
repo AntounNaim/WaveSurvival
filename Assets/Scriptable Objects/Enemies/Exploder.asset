@@ -10,28 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8b61f72264aa5e747b4c5db9cdbf37ed, type: 3}
-  m_Name: Fast-Enemy
+  m_Name: Exploder
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: Fast
-  maxHealth: 1
-  damage: 10
-  attackCooldown: 0.5
+  enemyName: Exploder
+  maxHealth: 2
+  damage: 20
+  attackCooldown: 1
   attackRange: 1.5
   isRanged: 0
   projectilePrefab: {fileID: 0}
   projectileSpeed: 15
   rangedAttackRange: 15
-  speed: 7
+  speed: 5
   stoppingDistance: 1
   angularSpeed: 120
   acceleration: 8
-  scoreValue: 25
-  color: {r: 0, g: 1, b: 0.85501504, a: 1}
-  scale: 1
-  isExploder: 0
+  scoreValue: 30
+  color: {r: 1, g: 0, b: 0.504529, a: 1}
+  scale: 0.8
+  isExploder: 1
   explosionRadius: 3
   explosionDamage: 30
-  explosionVFX: {fileID: 0}
+  explosionVFX: {fileID: 4760508873507173309, guid: e6ea9c25a2626f24f950623df40a493d, type: 3}
   detonationDistance: 2
   isSummoner: 0
   summonedEnemyPrefab: {fileID: 0}
