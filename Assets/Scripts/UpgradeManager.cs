@@ -1,10 +1,19 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using StarterAssets;
 
 public class UpgradeManager : MonoBehaviour
 {
     public static UpgradeManager Instance { get; private set; }
+
+    private int currentCriticalChance = 0;
+    private int currentHealthRegen = 0;
+    private int currentMoveSpeed = 0;
+    private int currentMaxHealth = 0;
+    private int currentLeechRounds = 0;
+    private bool hasExplosiveRounds = false;
+    private float lastRegenTime = 0f;
     
     [Header("Upgrade Pool")]
     [SerializeField] private List<ShopUpgrade> allUpgrades;
@@ -21,6 +30,21 @@ public class UpgradeManager : MonoBehaviour
             Instance = this;
         else
             Destroy(gameObject);
+    }
+    
+    private void Update()
+    {
+        // Health Regen
+        if (currentHealthRegen > 0 && Time.time >= lastRegenTime + 5f)
+        {
+            lastRegenTime = Time.time;
+            PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+            if (playerHealth != null && playerHealth.CurrentHealth < playerHealth.MaxHealth)
+            {
+                playerHealth.Heal(currentHealthRegen);
+                Debug.Log($"Health Regen: +{currentHealthRegen} HP");
+            }
+        }
     }
     
     public ShopUpgrade[] GetAllUpgrades()
@@ -46,12 +70,11 @@ public class UpgradeManager : MonoBehaviour
     }
     
     public int GetUpgradeCost(ShopUpgrade upgrade)
-{
-    int purchases = GetPurchaseCount(upgrade);
-    int cost = upgrade.baseCost + (upgrade.costIncreasePerPurchase * purchases);
-    Debug.Log($"GetUpgradeCost: {upgrade.upgradeName} - Purchases: {purchases}, BaseCost: {upgrade.baseCost}, Increase: {upgrade.costIncreasePerPurchase}, Total: {cost}");
-    return cost;
-}
+    {
+        int purchases = GetPurchaseCount(upgrade);
+        int cost = upgrade.baseCost + (upgrade.costIncreasePerPurchase * purchases);
+        return cost;
+    }
     
     public int GetNextDamageIncrease()
     {
@@ -60,64 +83,90 @@ public class UpgradeManager : MonoBehaviour
     }
     
     public bool PurchaseUpgrade(ShopUpgrade upgrade)
-{
-    int currentPurchases = GetPurchaseCount(upgrade);
-    
-    if (currentPurchases >= upgrade.maxPurchases)
     {
-        Debug.Log($"{upgrade.upgradeName} already at max level!");
-        return false;
+        int currentPurchases = GetPurchaseCount(upgrade);
+    
+        if (currentPurchases >= upgrade.maxPurchases)
+        {
+            Debug.Log($"{upgrade.upgradeName} already at max level!");
+            return false;
+        }
+        
+        int cost = GetUpgradeCost(upgrade);
+        
+        Debug.Log($"=== PURCHASE DEBUG ===");
+        Debug.Log($"Upgrade: {upgrade.upgradeName}");
+        Debug.Log($"Cost: {cost}");
+        Debug.Log($"Current Score: {ScoreManager.Instance.CurrentScore}");
+        Debug.Log($"Can afford: {ScoreManager.Instance.CurrentScore >= cost}");
+        
+        if (ScoreManager.Instance.CurrentScore < cost)
+        {
+            Debug.Log($"Cannot afford! Need {cost}, have {ScoreManager.Instance.CurrentScore}");
+            return false;
+        }
+        
+        // Apply upgrade effect
+        switch (upgrade.upgradeType)
+        {
+            case ShopUpgrade.UpgradeType.Heal:
+                PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+                playerHealth?.HealFull();
+                break;
+                
+            case ShopUpgrade.UpgradeType.IncreaseAmmoCapacity:
+                currentAmmoCapacityBonus += upgrade.ammoCapacityIncrease;
+                ApplyAmmoCapacityUpgrade();
+                break;
+                
+            case ShopUpgrade.UpgradeType.IncreaseDamage:
+                int actualIncrease = currentPurchases + 1;
+                currentDamageBonus += actualIncrease;
+                ApplyDamageUpgrade(actualIncrease);
+                break;
+                
+            case ShopUpgrade.UpgradeType.IncreaseCriticalChance:
+                currentCriticalChance += upgrade.criticalChanceIncrease;
+                Debug.Log($"Critical chance increased! Now: {currentCriticalChance}%");
+                break;
+                
+            case ShopUpgrade.UpgradeType.IncreaseHealthRegen:
+                currentHealthRegen += upgrade.healthRegenAmount;
+                Debug.Log($"Health regen increased! Now: {currentHealthRegen} HP per 5 sec");
+                break;
+                
+            case ShopUpgrade.UpgradeType.IncreaseMoveSpeed:
+                currentMoveSpeed += upgrade.moveSpeedIncrease;
+                ApplyMoveSpeedUpgrade();
+                break;
+                
+            case ShopUpgrade.UpgradeType.IncreaseMaxHealth:
+                currentMaxHealth += upgrade.maxHealthIncrease;
+                PlayerHealth player = FindFirstObjectByType<PlayerHealth>();
+                player?.IncreaseMaxHealth(upgrade.maxHealthIncrease);
+                break;
+                
+            case ShopUpgrade.UpgradeType.LeechRounds:
+                currentLeechRounds += upgrade.leechAmount;
+                Debug.Log($"Leech rounds increased! Now: +{currentLeechRounds} HP on kill");
+                break;
+                
+            case ShopUpgrade.UpgradeType.ExplosiveRounds:
+                hasExplosiveRounds = true;
+                Debug.Log("Explosive rounds unlocked!");
+                break;
+        }
+        
+        // Track purchase
+        if (purchasedUpgrades.ContainsKey(upgrade.upgradeType))
+            purchasedUpgrades[upgrade.upgradeType]++;
+        else
+            purchasedUpgrades[upgrade.upgradeType] = 1;
+        
+        ScoreManager.Instance.DeductScore(cost);
+        
+        return true;
     }
-    
-    int cost = GetUpgradeCost(upgrade);
-    
-    Debug.Log($"=== PURCHASE DEBUG ===");
-    Debug.Log($"Upgrade: {upgrade.upgradeName}");
-    Debug.Log($"Cost: {cost}");
-    Debug.Log($"Current Score before check: {ScoreManager.Instance.CurrentScore}");
-    
-    if (ScoreManager.Instance.CurrentScore < cost)
-    {
-        Debug.Log($"Cannot afford! Need {cost}, have {ScoreManager.Instance.CurrentScore}");
-        return false;
-    }
-    
-    // Apply upgrade effect
-    switch (upgrade.upgradeType)
-    {
-        case ShopUpgrade.UpgradeType.Heal:
-            PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
-            playerHealth?.HealFull();
-            break;
-            
-        case ShopUpgrade.UpgradeType.IncreaseAmmoCapacity:
-            currentAmmoCapacityBonus += upgrade.ammoCapacityIncrease;
-            ApplyAmmoCapacityUpgrade();
-            break;
-            
-        case ShopUpgrade.UpgradeType.IncreaseDamage:
-            int actualIncrease = currentPurchases + 1;
-            currentDamageBonus += actualIncrease;
-            ApplyDamageUpgrade(actualIncrease);
-            break;
-    }
-    
-    // Track purchase
-    if (purchasedUpgrades.ContainsKey(upgrade.upgradeType))
-        purchasedUpgrades[upgrade.upgradeType]++;
-    else
-        purchasedUpgrades[upgrade.upgradeType] = 1;
-    
-    Debug.Log($"Score before deduction: {ScoreManager.Instance.CurrentScore}");
-    
-    // USE DEDUCTSCORE INSTEAD OF ADDSCORE
-    ScoreManager.Instance.DeductScore(cost);
-    
-    Debug.Log($"Score after deduction: {ScoreManager.Instance.CurrentScore}");
-    Debug.Log($"=====================");
-    
-    return true;
-}
     
     private void ApplyAmmoCapacityUpgrade()
     {
@@ -125,6 +174,17 @@ public class UpgradeManager : MonoBehaviour
         if (activeWeapon != null && activeWeapon.CurrentWeapon != null)
         {
             activeWeapon.CurrentWeapon.IncreaseMaxAmmo(currentAmmoCapacityBonus);
+        }
+    }
+    
+    private void ApplyMoveSpeedUpgrade()
+    {
+        FirstPersonController controller = FindFirstObjectByType<FirstPersonController>();
+        if (controller != null)
+        {
+            // Apply speed boost (adjust based on your controller)
+            float speedMultiplier = 1f + (currentMoveSpeed / 100f);
+            Debug.Log($"Movement speed increased! Multiplier: {speedMultiplier}");
         }
     }
     
@@ -138,7 +198,42 @@ public class UpgradeManager : MonoBehaviour
         return currentDamageBonus;
     }
     
-    // ADD THESE METHODS:
+    public int GetCriticalChance()
+    {
+        return currentCriticalChance;
+    }
+    
+    public int GetLeechAmount()
+    {
+        return currentLeechRounds;
+    }
+    
+    public bool HasExplosiveRounds()
+    {
+        return hasExplosiveRounds;
+    }
+    
+    public void OnEnemyKilled(Vector3 enemyPosition)
+    {
+        // Leech Rounds
+        if (currentLeechRounds > 0)
+        {
+            PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+            if (playerHealth != null)
+            {
+                playerHealth.Heal(currentLeechRounds);
+                Debug.Log($"Leech rounds: +{currentLeechRounds} HP");
+            }
+        }
+        
+        // Explosive Rounds on kill (optional effect)
+        if (hasExplosiveRounds)
+        {
+            // Could add small explosion on kill
+            Debug.Log("Explosive rounds triggered!");
+        }
+    }
+    
     public void AddDamageUpgrade(int amount)
     {
         currentDamageBonus += amount;
@@ -157,6 +252,12 @@ public class UpgradeManager : MonoBehaviour
         purchasedUpgrades.Clear();
         currentDamageBonus = 0;
         currentAmmoCapacityBonus = 0;
+        currentCriticalChance = 0;
+        currentHealthRegen = 0;
+        currentMoveSpeed = 0;
+        currentMaxHealth = 0;
+        currentLeechRounds = 0;
+        hasExplosiveRounds = false;
         
         ActiveWeapon activeWeapon = FindFirstObjectByType<ActiveWeapon>();
         if (activeWeapon != null && activeWeapon.CurrentWeapon != null)

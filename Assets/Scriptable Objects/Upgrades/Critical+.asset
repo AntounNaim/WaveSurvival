@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4253247680d52d146b95a6fec1a3132f, type: 3}
+  m_Name: Critical+
+  m_EditorClassIdentifier: Assembly-CSharp::ShopUpgrade
+  upgradeName: Critical+
+  description: 
+  icon: {fileID: 0}
+  baseCost: 350
+  costIncreasePerPurchase: 50
+  upgradeType: 3
+  healthAmount: 0
+  ammoCapacityIncrease: 0
+  baseDamageIncrease: 0
+  maxPurchases: 3
+  criticalChanceIncrease: 10
+  healthRegenAmount: 0
+  moveSpeedIncrease: 0
+  maxHealthIncrease: 0
+  leechAmount: 0

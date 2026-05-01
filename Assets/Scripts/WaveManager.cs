@@ -231,6 +231,27 @@ public class WaveManager : MonoBehaviour
         isWaveActive = false;
         Debug.Log($"Wave {currentWave} complete!");
     }
+
+    public void ResetWave()
+    {
+        // Stop all coroutines
+        StopAllCoroutines();
+        
+        // Reset wave variables
+        currentWave = 1;
+        isWaveActive = false;
+        
+        // Clear any active enemies
+        EnemyHealth[] enemies = FindObjectsByType<EnemyHealth>(FindObjectsSortMode.None);
+        foreach (EnemyHealth enemy in enemies)
+        {
+            if (enemy != null)
+                Destroy(enemy.gameObject);
+        }
+        
+        // Restart the wave loop
+        StartCoroutine(WaveLoop());
+    }
     
     private int CalculateEnemiesForWave()
     {

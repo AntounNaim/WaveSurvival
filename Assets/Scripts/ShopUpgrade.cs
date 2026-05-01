@@ -18,13 +18,26 @@ public class ShopUpgrade : ScriptableObject
     [Header("Effect Values")]
     public int healthAmount = 100;
     public int ammoCapacityIncrease = 10;
-    public int baseDamageIncrease = 1;  // First purchase gives +1
+    public int baseDamageIncrease = 1;
     public int maxPurchases = 5;
+    
+    // New upgrade values
+    public int criticalChanceIncrease = 10;
+    public int healthRegenAmount = 1;
+    public int moveSpeedIncrease = 10;
+    public int maxHealthIncrease = 25;
+    public int leechAmount = 5;
     
     public enum UpgradeType
     {
         Heal,
         IncreaseAmmoCapacity,
-        IncreaseDamage
+        IncreaseDamage,
+        IncreaseCriticalChance,
+        IncreaseHealthRegen,
+        IncreaseMoveSpeed,
+        IncreaseMaxHealth,
+        LeechRounds,
+        ExplosiveRounds
     }
 }

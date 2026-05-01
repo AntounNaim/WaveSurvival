@@ -14,7 +14,7 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private TextMeshProUGUI healthText;
     
     [Header("Invincibility")]
-    [SerializeField] private float invincibilityDuration = 1f;
+    [SerializeField] private float invincibilityDuration = 0.3f;  // Reduced for better combat
     private bool isInvincible = false;
     
     public int CurrentHealth => currentHealth;
@@ -51,28 +51,36 @@ public class PlayerHealth : MonoBehaviour
     }
     
     public void Heal(int amount)
-{
-    if (!IsAlive) return;
-    
-    int oldHealth = currentHealth;
-    currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
-    
-    if (currentHealth > oldHealth)
     {
-        UpdateHealthUI();
-        Debug.Log($"Player healed from {oldHealth} to {currentHealth}/{maxHealth}");
+        if (!IsAlive) return;
+        
+        int oldHealth = currentHealth;
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        
+        if (currentHealth > oldHealth)
+        {
+            UpdateHealthUI();
+            Debug.Log($"Player healed from {oldHealth} to {currentHealth}/{maxHealth}");
+        }
+        else
+        {
+            Debug.Log($"Player at full health ({currentHealth}/{maxHealth}) - no healing needed");
+        }
     }
-    else
-    {
-        Debug.Log($"Player at full health ({currentHealth}/{maxHealth}) - no healing needed");
-    }
-}
     
     public void HealFull()
     {
         currentHealth = maxHealth;
         UpdateHealthUI();
         Debug.Log($"Player fully healed! Health: {currentHealth}/{maxHealth}");
+    }
+    
+    public void IncreaseMaxHealth(int amount)
+    {
+        maxHealth += amount;
+        currentHealth = maxHealth;
+        UpdateHealthUI();
+        Debug.Log($"Max health increased to {maxHealth}!");
     }
     
     private void UpdateHealthUI()

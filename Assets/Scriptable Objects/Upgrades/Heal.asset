@@ -22,3 +22,8 @@ MonoBehaviour:
   ammoCapacityIncrease: 0
   baseDamageIncrease: 0
   maxPurchases: 100000
+  criticalChanceIncrease: 10
+  healthRegenAmount: 0
+  moveSpeedIncrease: 0
+  maxHealthIncrease: 0
+  leechAmount: 0

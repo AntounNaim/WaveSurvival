@@ -308,6 +308,11 @@ private void PerformRangedAttack()
         private void Die()
     {
         Debug.Log($"{gameObject.name} died!");
+        // Notify UpgradeManager for leech rounds
+        if (UpgradeManager.Instance != null)
+        {
+            UpgradeManager.Instance.OnEnemyKilled(transform.position);
+        }
         
         // SUMMON ENEMIES ON DEATH
         if (isSummoner && !isDetonating)

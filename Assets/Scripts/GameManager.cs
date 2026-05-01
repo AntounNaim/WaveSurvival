@@ -82,16 +82,38 @@ public class GameManager : MonoBehaviour
     
     public void RestartGame()
     {
+        // Reset time scale first
         Time.timeScale = 1f;
-        isGameOver = false;
-        isPaused = false;
         
+        // Reset all managers
         if (UpgradeManager.Instance != null)
             UpgradeManager.Instance.ResetUpgrades();
+        
         if (ScoreManager.Instance != null)
             ScoreManager.Instance.ResetScore();
         
+        // Reset wave manager state
+        if (WaveManager.Instance != null)
+        {
+            // You may need to add a Reset method to WaveManager
+            WaveManager.Instance.ResetWave();
+        }
+        
+        // Clear any active enemies or minions
+        ClearAllEnemies();
+        
+        // Reload the scene
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    private void ClearAllEnemies()
+    {
+        // Find and destroy all enemies
+        EnemyHealth[] enemies = FindObjectsByType<EnemyHealth>(FindObjectsSortMode.None);
+        foreach (EnemyHealth enemy in enemies)
+        {
+            Destroy(enemy.gameObject);
+        }
     }
     
     public void ReturnToMainMenu()
