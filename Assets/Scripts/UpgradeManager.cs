@@ -169,13 +169,32 @@ public class UpgradeManager : MonoBehaviour
     }
     
     private void ApplyAmmoCapacityUpgrade()
+{
+    // Find all weapons on the player
+    ActiveWeapon activeWeapon = FindFirstObjectByType<ActiveWeapon>();
+    if (activeWeapon != null && activeWeapon.CurrentWeapon != null)
     {
-        ActiveWeapon activeWeapon = FindFirstObjectByType<ActiveWeapon>();
-        if (activeWeapon != null && activeWeapon.CurrentWeapon != null)
+        // Get all weapons from the WeaponSwitcher
+        WeaponSwitcher switcher = activeWeapon.GetComponentInChildren<WeaponSwitcher>();
+        if (switcher != null)
         {
+            // Apply to all unlocked weapons
+            Weapon[] allWeapons = switcher.GetAllWeapons();
+            foreach (Weapon weapon in allWeapons)
+            {
+                if (weapon != null)
+                {
+                    weapon.IncreaseMaxAmmo(currentAmmoCapacityBonus);
+                }
+            }
+        }
+        else
+        {
+            // Fallback to just current weapon
             activeWeapon.CurrentWeapon.IncreaseMaxAmmo(currentAmmoCapacityBonus);
         }
     }
+}
     
     private void ApplyMoveSpeedUpgrade()
     {

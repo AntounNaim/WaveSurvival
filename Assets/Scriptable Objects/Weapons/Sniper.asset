@@ -15,8 +15,10 @@ MonoBehaviour:
   maxAmmo: 8
   weaponName: Sniper
   damage: 10
-  fireRate: 1
   range: 50
   isAutomatic: 0
+  fireRate: 1
   hitVFXPrefab: {fileID: 6384943288997290252, guid: 6334c833b6afca84f93facbbc3fd6db6, type: 3}
   shakeIntensity: -0.02
+  recoilX: 0.7
+  recoilY: 2.5

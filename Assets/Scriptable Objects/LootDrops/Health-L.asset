@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LootData
   lootName: Health Large
   lootIcon: {fileID: 0}
-  lootPrefab: {fileID: 2872596658775814052, guid: 10f10a39e9b42c646bbea515adfc6ac6, type: 3}
+  lootPrefab: {fileID: 5008621260466029169, guid: 8ca9f9e34bccf2c4e8f4652d4dd57c82, type: 3}
   lootType: 1
   ammoAmount: 0
   healAmount: 25

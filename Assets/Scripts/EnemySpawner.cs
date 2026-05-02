@@ -1,5 +1,7 @@
 using System.Collections;
 using UnityEngine;
+using System.Linq;
+using System.Collections.Generic;
 
 public class EnemySpawner : MonoBehaviour
 {
@@ -10,11 +12,14 @@ public class EnemySpawner : MonoBehaviour
     [Header("Spawn Settings")]
     [SerializeField] private Transform[] spawnPoints;
     [SerializeField] private int maxActiveEnemies = 10;
+    [SerializeField] private int numberOfClosestSpawnPoints = 2; // How many closest spawners to use
 
     [Header("Spawn Weights")]
     [SerializeField] private int[] spawnWeights;
 
     private ObjectPool<EnemyHealth>[] pools;
+    private Transform player;
+    private List<Transform> activeSpawnPoints = new List<Transform>();
 
     public int ActiveEnemyCount => GetTotalActiveEnemies();
     public int MaxActiveEnemies => maxActiveEnemies;
@@ -26,6 +31,48 @@ public class EnemySpawner : MonoBehaviour
         {
             pools[i] = new ObjectPool<EnemyHealth>(enemyPrefabs[i], transform, prewarmCount);
         }
+        
+        FindPlayer();
+    }
+
+    private void Update()
+    {
+        // Update closest spawn points every second (performance optimization)
+        if (Time.frameCount % 60 == 0)
+        {
+            UpdateClosestSpawnPoints();
+        }
+    }
+
+    private void FindPlayer()
+    {
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null)
+            player = playerObj.transform;
+    }
+
+    private void UpdateClosestSpawnPoints()
+    {
+        if (player == null)
+        {
+            FindPlayer();
+            return;
+        }
+        
+        if (spawnPoints.Length == 0) return;
+        
+        // Sort spawn points by distance to player
+        var sortedSpawnPoints = spawnPoints.OrderBy(sp => Vector3.Distance(sp.position, player.position)).ToList();
+        
+        // Take the closest N spawn points
+        activeSpawnPoints.Clear();
+        for (int i = 0; i < Mathf.Min(numberOfClosestSpawnPoints, sortedSpawnPoints.Count); i++)
+        {
+            activeSpawnPoints.Add(sortedSpawnPoints[i]);
+        }
+        
+        // Debug: Log which spawn points are active
+        // Debug.Log($"Active spawn points: {activeSpawnPoints.Count}");
     }
 
     private int GetWeightedRandomIndex()
@@ -37,8 +84,8 @@ public class EnemySpawner : MonoBehaviour
         }
     
         int randomValue = Random.Range(0, totalWeight);
-    
         int cumulativeWeight = 0;
+        
         for (int i = 0; i < spawnWeights.Length; i++)
         {
             cumulativeWeight += spawnWeights[i];
@@ -64,16 +111,32 @@ public class EnemySpawner : MonoBehaviour
 
     public void SpawnEnemy()
     {
-        if (spawnPoints.Length == 0) return;
+        if (activeSpawnPoints.Count == 0)
+        {
+            // Fallback to all spawn points if none are active
+            if (spawnPoints.Length == 0) return;
+            Transform point = spawnPoints[Random.Range(0, spawnPoints.Length)];
+            SpawnEnemyAtPoint(point);
+            return;
+        }
         
-        Transform point = spawnPoints[Random.Range(0, spawnPoints.Length)];
-        Vector3 spawnPos = point.position;
-        
-        // Try a large offset to see if it's just not high enough
-        spawnPos.y += -0.2f;  // Increased from 0.8 to 3
-        
+        // Pick a random spawn point from the closest ones
+        Transform spawnPoint = activeSpawnPoints[Random.Range(0, activeSpawnPoints.Count)];
+        SpawnEnemyAtPoint(spawnPoint);
+    }
+    
+    private void SpawnEnemyAtPoint(Transform point)
+    {
         int enemyIndex = GetWeightedRandomIndex();
-        EnemyHealth enemy = pools[enemyIndex].Get(spawnPos, point.rotation);
+        EnemyHealth enemy = pools[enemyIndex].Get(point.position, point.rotation);
+        enemy.OnDied += HandleEnemyDied;
+    }
+
+    public void SpawnEnemyAtPosition(Vector3 position, int enemyTypeIndex)
+    {
+        if (enemyTypeIndex >= pools.Length) return;
+        
+        EnemyHealth enemy = pools[enemyTypeIndex].Get(position, Quaternion.identity);
         enemy.OnDied += HandleEnemyDied;
     }
 
@@ -90,14 +153,8 @@ public class EnemySpawner : MonoBehaviour
             }
         }
     }
-
-        public void SpawnEnemyAtPosition(Vector3 position, int enemyTypeIndex)
-    {
-        EnemyHealth enemy = pools[enemyTypeIndex].Get(position, Quaternion.identity);
-        enemy.OnDied += HandleEnemyDied;
-    }
-
-        public int GetEnemyTypeIndex(GameObject enemyPrefab)
+    
+    public int GetEnemyTypeIndex(GameObject enemyPrefab)
     {
         for (int i = 0; i < enemyPrefabs.Length; i++)
         {
@@ -106,6 +163,6 @@ public class EnemySpawner : MonoBehaviour
                 return i;
             }
         }
-        return 0; // Default to first type
+        return 0;
     }
 }

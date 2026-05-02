@@ -21,7 +21,7 @@ MonoBehaviour:
   projectilePrefab: {fileID: 0}
   projectileSpeed: 15
   rangedAttackRange: 15
-  speed: 7
+  speed: 5.5
   stoppingDistance: 1
   angularSpeed: 120
   acceleration: 8

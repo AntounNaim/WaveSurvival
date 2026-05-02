@@ -14,7 +14,7 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private TextMeshProUGUI healthText;
     
     [Header("Invincibility")]
-    [SerializeField] private float invincibilityDuration = 0.3f;  // Reduced for better combat
+    [SerializeField] private float invincibilityDuration = 0.3f;
     private bool isInvincible = false;
     
     public int CurrentHealth => currentHealth;

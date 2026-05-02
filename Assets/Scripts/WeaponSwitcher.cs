@@ -12,6 +12,12 @@ public class WeaponSwitcher : MonoBehaviour
     List<Weapon> unlockedWeapons= new List<Weapon>();
     int currentIndex = -1;
 
+
+    public Weapon[] GetAllWeapons()
+{
+    return unlockedWeapons.ToArray();
+}
+
     private void Awake()
     {
         inputs = GetComponentInParent<StarterAssetsInputs>();

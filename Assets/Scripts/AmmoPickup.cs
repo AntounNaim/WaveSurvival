@@ -4,14 +4,21 @@ public class AmmoPickup : Pickup
 {
     protected override bool OnPickedUp(Collider player)
     {
-        ActiveWeapon activeWeapon = player.GetComponentInChildren<ActiveWeapon>();
-
-        if (activeWeapon == null || activeWeapon.CurrentWeapon == null) return false;
-
-        Weapon weapon = activeWeapon.CurrentWeapon;
-        if (weapon.CurrentAmmo >= weapon.Data.maxAmmo) return false;
-
-        weapon.RefillAmmo();
-        return true;
+        WeaponSwitcher switcher = player.GetComponentInChildren<WeaponSwitcher>();
+        if (switcher == null) return false;
+        
+        Weapon[] allWeapons = switcher.GetAllWeapons();
+        bool anyRefilled = false;
+        
+        foreach (Weapon weapon in allWeapons)
+        {
+            if (weapon != null && weapon.CurrentAmmo < weapon.GetMaxAmmo())
+            {
+                weapon.RefillAmmo();
+                anyRefilled = true;
+            }
+        }
+        
+        return anyRefilled;
     }
 }

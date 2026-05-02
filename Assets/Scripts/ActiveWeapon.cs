@@ -11,6 +11,7 @@ public class ActiveWeapon : MonoBehaviour
     [SerializeField] private GameObject hitFXPrefab;
     [SerializeField] private GameObject explosionVFXPrefab;
     private int explosiveProcCounter = 0;
+    private int pickupLayerMask;
     InputAction shootAction;
 
     FirstPersonController controller;
@@ -21,15 +22,29 @@ public class ActiveWeapon : MonoBehaviour
     public Weapon CurrentWeapon => currentWeapon;
 
     private void Awake()
+{
+   currentWeapon = null;
+   inputs = GetComponentInParent<StarterAssetsInputs>();
+   shootAction = GetComponentInParent<PlayerInput>().actions["Shoot"];
+   controller = GetComponentInParent<FirstPersonController>();
+   
+   // Create layer mask that ignores Pickup layer
+   int pickupLayer = LayerMask.NameToLayer("Pickup");
+   pickupLayerMask = ~(1 << pickupLayer);
+}
+
+    private void OnEnable()
     {
-       currentWeapon = null;
-       inputs = GetComponentInParent<StarterAssetsInputs>();
-       shootAction = GetComponentInParent<PlayerInput>().actions["Shoot"];
-       controller = GetComponentInParent<FirstPersonController>();
+        // Reset input state when enabled
+        if (inputs != null)
+            inputs.ShootInput(false);
     }
 
     private void Update()
     {
+        // Safety check - if time is frozen, don't process
+        if (Time.timeScale == 0f) return;
+        
         HandleShoot();
     }
     
@@ -40,13 +55,23 @@ public class ActiveWeapon : MonoBehaviour
         if (!canFire || currentWeapon == null || !currentWeapon.HasAmmo) {
             return;
         }
+        
+        // Check if shoot button is pressed
+        bool isShooting = false;
         if (weaponData.isAutomatic)
         {
-            if (!shootAction.IsPressed()) return;
+            isShooting = shootAction.IsPressed();
         }
         else
         {
-            if (!inputs.shoot) return;
+            isShooting = inputs.shoot;
+        }
+        
+        if (!isShooting) return;
+        
+        // Reset input for semi-auto weapons immediately to prevent multiple shots
+        if (!weaponData.isAutomatic)
+        {
             inputs.ShootInput(false);
         }
 
@@ -55,32 +80,29 @@ public class ActiveWeapon : MonoBehaviour
         currentWeapon.Shoot();
         RaycastHit hit;
 
-        // Increment shot counter for explosive rounds
         explosiveProcCounter++;
         
-        // Apply recoil based on weapon
         float yawKick = Random.Range(-weaponData.recoilX, weaponData.recoilX);
         controller.ApplyRecoil(weaponData.recoilY, yawKick);
 
-        // Add spread to crosshair
         if (CrosshairManager.Instance != null)
         {
             CrosshairManager.Instance.AddSpread(0.2f);
         }
 
         if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward,
-            out hit, weaponData.range))
+            out hit, weaponData.range, pickupLayerMask))
         {
+            Debug.Log($"Raycast hit: {hit.collider.gameObject.name}, Tag: {hit.collider.tag}, Layer: {hit.collider.gameObject.layer}");
             EnemyHealth health = hit.collider.GetComponent<EnemyHealth>();
             
-            // ONLY proceed if we hit an enemy
             if (health != null)
             {
+                Debug.Log($"ENEMY HIT! Health before: {health.CurrentHealth}");
                 int totalDamage = weaponData.damage;
                 if (UpgradeManager.Instance != null)
                     totalDamage += UpgradeManager.Instance.GetDamageBonus();
                 
-                // Critical hit chance
                 bool isCritical = false;
                 if (UpgradeManager.Instance != null)
                 {
@@ -97,21 +119,18 @@ public class ActiveWeapon : MonoBehaviour
                 
                 health.TakeDamage(totalDamage);
                 
-                // Explosive Rounds - ONLY ON EVERY 5TH SHOT
                 if (UpgradeManager.Instance != null && UpgradeManager.Instance.HasExplosiveRounds())
                 {
                     if (explosiveProcCounter >= 5)
                     {
-                        explosiveProcCounter = 0; // Reset counter
+                        explosiveProcCounter = 0;
                         
-                        // Spawn explosion VFX
                         if (explosionVFXPrefab != null)
                         {
                             GameObject explosion = Instantiate(explosionVFXPrefab, hit.point, Quaternion.identity);
                             Destroy(explosion, 1f);
                         }
                         
-                        // AoE damage to nearby enemies
                         Collider[] nearby = Physics.OverlapSphere(hit.point, 2f);
                         foreach (Collider col in nearby)
                         {
@@ -125,7 +144,6 @@ public class ActiveWeapon : MonoBehaviour
                     }
                 }
                 
-                // ONLY show hit marker when hitting an enemy
                 if (HitMarker.Instance != null)
                 {
                     HitMarker.Instance.ShowHitMarker(willKill, isCritical);
@@ -142,6 +160,6 @@ public class ActiveWeapon : MonoBehaviour
         weaponData = newWeapon.Data;
         nextFireTime = 0;
         inputs.ShootInput(false);
-        explosiveProcCounter = 0; // Reset counter when switching weapons
+        explosiveProcCounter = 0;
     }
 }

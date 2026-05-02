@@ -8,6 +8,7 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private EnemySpawner enemySpawner;
     [SerializeField] private TextMeshProUGUI waveText;
     [SerializeField] private TextMeshProUGUI waveCountdownText;
+    [SerializeField] private TextMeshProUGUI enemiesLeftText;
     
     [Header("Wave Settings")]
     [SerializeField] private int currentWave = 1;
@@ -18,11 +19,14 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private GameObject overlayPanel;
     
     private bool isWaveActive = false;
+    private int totalEnemiesInWave = 0;
+    private int enemiesRemaining = 0;
     
     public static WaveManager Instance { get; private set; }
     
     public int CurrentWave => currentWave;
     public bool IsWaveActive => isWaveActive;
+    public int EnemiesRemaining => enemiesRemaining;
     
     private void Awake()
     {
@@ -59,15 +63,6 @@ public class WaveManager : MonoBehaviour
     // Get wave-specific multiplier
     public float GetHealthMultiplier()
     {
-        // Waves 1-4: slight increase (1.0 to 1.2)
-        // Wave 5: SWARM - spike to 1.8
-        // Waves 6-9: gradual from 1.3 to 1.5
-        // Wave 10: BOSS SWARM - spike to 2.5
-        // Waves 11-14: gradual from 1.8 to 2.2
-        // Wave 15: ELITE SWARM - spike to 3.0
-        // Waves 16-19: gradual from 2.5 to 2.8
-        // Wave 20: APOCALYPSE - spike to 4.0
-        
         if (currentWave == 5)
             return 1.8f;
         else if (currentWave == 10)
@@ -78,7 +73,6 @@ public class WaveManager : MonoBehaviour
             return 4.0f;
         else
         {
-            // Gradual increase between spikes
             if (currentWave < 5)
                 return 1.0f + (currentWave - 1) * 0.07f;
             else if (currentWave < 10)
@@ -94,9 +88,9 @@ public class WaveManager : MonoBehaviour
     private int GetEnemyCountMultiplier()
     {
         if (currentWave == 5)
-            return 2;  // Double enemies
+            return 2;
         else if (currentWave == 10)
-            return 3;  // Triple enemies
+            return 3;
         else if (currentWave == 15)
             return 3;
         else if (currentWave == 20)
@@ -175,12 +169,10 @@ public class WaveManager : MonoBehaviour
     {
         isWaveActive = true;
         
-        // Show wave number with special name
         if (waveText != null)
         {
             waveText.text = GetWaveDisplayName();
             
-            // Change color for special waves
             if (currentWave == 5 || currentWave == 10 || currentWave == 15 || currentWave == 20)
             {
                 waveText.color = Color.red;
@@ -197,17 +189,20 @@ public class WaveManager : MonoBehaviour
         
         int enemiesToSpawn = CalculateEnemiesForWave();
         int multiplier = GetEnemyCountMultiplier();
-        enemiesToSpawn *= multiplier;
-        enemiesToSpawn = Mathf.Min(enemiesToSpawn, 40); // Cap at 40 enemies
+        totalEnemiesInWave = enemiesToSpawn * multiplier;
+        enemiesRemaining = totalEnemiesInWave;
+        enemiesToSpawn = Mathf.Min(enemiesToSpawn * multiplier, 40);
         
-        Debug.Log($"Wave {currentWave} starting! Enemies: {enemiesToSpawn} (Health Multiplier: {GetHealthMultiplier()}x)");
+        // Update enemies left UI
+        UpdateEnemiesLeftUI();
+        
+        Debug.Log($"Wave {currentWave} starting! Enemies: {totalEnemiesInWave} (Health Multiplier: {GetHealthMultiplier()}x)");
         
         if (multiplier > 1)
         {
             Debug.Log($"!!! SPECIAL WAVE! {multiplier}x enemies !!!");
         }
         
-        // Spawn enemies gradually
         while (enemiesToSpawn > 0)
         {
             if (enemySpawner.ActiveEnemyCount < enemySpawner.MaxActiveEnemies)
@@ -215,7 +210,6 @@ public class WaveManager : MonoBehaviour
                 enemySpawner.SpawnEnemy();
                 enemiesToSpawn--;
                 
-                // Faster spawn rate for special waves
                 float spawnDelay = (multiplier > 1) ? Random.Range(0.3f, 0.8f) : Random.Range(0.5f, 1.5f);
                 yield return new WaitForSeconds(spawnDelay);
             }
@@ -225,23 +219,32 @@ public class WaveManager : MonoBehaviour
             }
         }
         
-        // Wait for all enemies to die
         yield return new WaitUntil(() => enemySpawner.ActiveEnemyCount == 0 && !EnemyHealth.HasActiveMinions);
         
         isWaveActive = false;
         Debug.Log($"Wave {currentWave} complete!");
     }
-
+    
+    private void UpdateEnemiesLeftUI()
+    {
+        if (enemiesLeftText != null)
+        {
+            enemiesLeftText.text = $"Enemies Left: {enemiesRemaining}";
+        }
+    }
+    
+    public void OnEnemyDied()
+    {
+        enemiesRemaining--;
+        UpdateEnemiesLeftUI();
+    }
+    
     public void ResetWave()
     {
-        // Stop all coroutines
         StopAllCoroutines();
-        
-        // Reset wave variables
         currentWave = 1;
         isWaveActive = false;
         
-        // Clear any active enemies
         EnemyHealth[] enemies = FindObjectsByType<EnemyHealth>(FindObjectsSortMode.None);
         foreach (EnemyHealth enemy in enemies)
         {
@@ -249,14 +252,18 @@ public class WaveManager : MonoBehaviour
                 Destroy(enemy.gameObject);
         }
         
-        // Restart the wave loop
         StartCoroutine(WaveLoop());
     }
     
     private int CalculateEnemiesForWave()
     {
-        // Base enemies: 5 + (wave * 2), capped at 20 before multiplier
         int baseEnemies = 5 + (currentWave - 1) * 2;
         return Mathf.Min(baseEnemies, 20);
+    }
+
+    public void OnMinionSpawned()
+    {
+        enemiesRemaining++;
+        UpdateEnemiesLeftUI();
     }
 }

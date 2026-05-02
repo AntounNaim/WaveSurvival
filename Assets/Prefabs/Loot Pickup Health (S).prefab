@@ -64,6 +64,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: Loot Pickup Health (S)
       objectReference: {fileID: 0}
+    - target: {fileID: 5647361192227029982, guid: 3da495e2323cf7b41b6a603adb3d1af1, type: 3}
+      propertyPath: m_Radius
+      value: 0.48359665
+      objectReference: {fileID: 0}
+    - target: {fileID: 5647361192227029982, guid: 3da495e2323cf7b41b6a603adb3d1af1, type: 3}
+      propertyPath: m_Center.y
+      value: 0.35642228
+      objectReference: {fileID: 0}
     - target: {fileID: 8510203847176447454, guid: 3da495e2323cf7b41b6a603adb3d1af1, type: 3}
       propertyPath: m_IsActive
       value: 0

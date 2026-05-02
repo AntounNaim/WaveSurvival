@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -87,16 +88,81 @@ public class EnemyHealth : MonoBehaviour, IPoolable
 
     private void Update()
     {
+
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null && rb.isKinematic)
+        {
+            // Reset velocity to stop sliding
+            if (rb.linearVelocity.magnitude > 0.1f)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+        }
+        // If dead, skip everything
+        if (currentHealth <= 0) return;
+        
         if (player == null)
         {
             FindPlayer();
             return;
         }
+
+
+        Collider col= GetComponent<Collider>();
+
+        if (Time.frameCount % 60 == 0)
+        {
+            Debug.Log($"{gameObject.name} - Collider enabled: {col?.enabled}, isTrigger: {col?.isTrigger}, Layer: {gameObject.layer}");
+        }
+
         
+        if(col != null && !col.enabled)
+        {
+            Debug.LogWarning($"Collider on {gameObject.name} was disabled! Re-enabling.");
+            col.enabled = true;
+        }
+
+        // FIX SPINNING - Force agent to update rotation
+        if (agent != null && agent.isOnNavMesh && agent.enabled)
+        {
+            if (agent.velocity.magnitude > 0.1f)
+            {
+                // Update rotation to face movement direction
+                Vector3 direction = agent.velocity.normalized;
+                if (direction != Vector3.zero)
+                {
+                    Quaternion targetRotation = Quaternion.LookRotation(direction);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
+                }
+            }
+            else if (player != null)
+            {
+                // When stopped, face the player
+                Vector3 directionToPlayer = (player.position - transform.position).normalized;
+                directionToPlayer.y = 0;
+                if (directionToPlayer != Vector3.zero)
+                {
+                    Quaternion targetRotation = Quaternion.LookRotation(directionToPlayer);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 5f);
+                }
+            }
+        }
+        
+        // Unstuck logic - only for melee enemies
+        if (agent != null && agent.isOnNavMesh && agent.enabled && !isRanged && !isExploder)
+        {
+            if (agent.velocity.magnitude < 0.1f && agent.remainingDistance > 0.5f)
+            {
+                agent.SetDestination(player.position);
+            }
+        }
+
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         
         // Update animator speed
-        if (animator != null)
+        if (animator != null && agent != null)
         {
             float speed = agent.velocity.magnitude;
             animator.SetFloat("Speed", speed);
@@ -111,7 +177,7 @@ public class EnemyHealth : MonoBehaviour, IPoolable
                 return;
             }
             
-            if (agent.isOnNavMesh && agent.enabled)
+            if (agent != null && agent.isOnNavMesh && agent.enabled)
             {
                 agent.SetDestination(player.position);
             }
@@ -127,31 +193,32 @@ public class EnemyHealth : MonoBehaviour, IPoolable
             {
                 lastRangedAttackTime = Time.time;
                 PerformRangedAttack();
-                agent.ResetPath();
+                
+                if (agent != null && agent.isOnNavMesh && agent.enabled)
+                {
+                    agent.ResetPath();
+                }
                 return;
             }
             
-            if (agent.isOnNavMesh && agent.enabled && distanceToPlayer > enemyData.rangedAttackRange * 0.7f)
+            if (agent != null && agent.isOnNavMesh && agent.enabled && distanceToPlayer > enemyData.rangedAttackRange * 0.7f)
             {
                 agent.SetDestination(player.position);
             }
-            else if (agent.isOnNavMesh && agent.enabled)
+            else if (agent != null && agent.isOnNavMesh && agent.enabled)
             {
                 agent.ResetPath();
             }
         }
         else // MELEE BEHAVIOR
         {
-            // DISTANCE-BASED DAMAGE (most reliable)
             if (distanceToPlayer <= enemyData.attackRange)
             {
-                // Stop moving when in attack range
-                if (agent.isOnNavMesh && agent.enabled)
+                if (agent != null && agent.isOnNavMesh && agent.enabled)
                 {
                     agent.ResetPath();
                 }
                 
-                // Deal damage on cooldown
                 if (Time.time >= lastAttackTime + enemyData.attackCooldown)
                 {
                     lastAttackTime = Time.time;
@@ -160,8 +227,7 @@ public class EnemyHealth : MonoBehaviour, IPoolable
             }
             else
             {
-                // Move toward player when outside attack range
-                if (agent.isOnNavMesh && agent.enabled)
+                if (agent != null && agent.isOnNavMesh && agent.enabled)
                 {
                     agent.SetDestination(player.position);
                 }
@@ -169,9 +235,10 @@ public class EnemyHealth : MonoBehaviour, IPoolable
         }
     }
 
-    // COLLISION-BASED DAMAGE
     private void OnCollisionStay(Collision collision)
     {
+        if (currentHealth <= 0) return;
+        
         if (collision.gameObject.CompareTag("Player"))
         {
             if (Time.time >= lastAttackTime + enemyData.attackCooldown)
@@ -184,6 +251,8 @@ public class EnemyHealth : MonoBehaviour, IPoolable
 
     private void OnTriggerStay(Collider other)
     {
+        if (currentHealth <= 0) return;
+        
         if (other.CompareTag("Player"))
         {
             if (Time.time >= lastAttackTime + enemyData.attackCooldown)
@@ -213,12 +282,12 @@ public class EnemyHealth : MonoBehaviour, IPoolable
         
         isDetonating = true;
         
-        if (animator != null)
-        {
-            animator.SetTrigger("Die");
-        }
-        
         Debug.Log($"{enemyData.enemyName} DETONATED!");
+
+        if (WaveManager.Instance != null)
+        {
+            WaveManager.Instance.OnEnemyDied();
+        }
         
         if (player != null)
         {
@@ -268,7 +337,7 @@ public class EnemyHealth : MonoBehaviour, IPoolable
             Debug.Log($"{enemyData.enemyName} shot at player!");
         }
         
-        if (agent != null && agent.isOnNavMesh)
+        if (agent != null && agent.isOnNavMesh && agent.enabled)
         {
             agent.ResetPath();
         }
@@ -288,7 +357,7 @@ public class EnemyHealth : MonoBehaviour, IPoolable
             Debug.Log($"{enemyData.enemyName} attacked! Distance: {Vector3.Distance(transform.position, player.position)}");
         }
         
-        if (agent != null && agent.isOnNavMesh)
+        if (agent != null && agent.isOnNavMesh && agent.enabled)
         {
             agent.ResetPath();
         }
@@ -352,7 +421,11 @@ public class EnemyHealth : MonoBehaviour, IPoolable
 
     public void TakeDamage(int damage)
     {
-        if (currentHealth <= 0) return;
+        if (currentHealth <= 0)
+        {
+        Debug.LogWarning($"Tried to damage {gameObject.name} but already dead!");
+        return;
+        }
         
         currentHealth -= damage;
         Debug.Log($"{gameObject.name} took {damage} damage! Health: {currentHealth}");
@@ -386,9 +459,61 @@ public class EnemyHealth : MonoBehaviour, IPoolable
     {
         Debug.Log($"{gameObject.name} died!");
         
+        if (currentHealth > 0) return;
+        
+        // Disable everything immediately
+        if (agent != null)
+        {
+            agent.isStopped = true;
+            agent.enabled = false;
+        }
+        
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+        
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
+        
+        // Disable the script to prevent further updates
+        enabled = false;
+        
+        // Play death animation
         if (animator != null)
         {
             animator.SetTrigger("Die");
+            
+            // Get death animation length and multiply by speed
+            float deathAnimLength = GetAnimationLength("Die");
+            
+            // If the animator has a speed parameter, use it
+            float animSpeed = animator.GetFloat("DeathSpeed");
+            if (animSpeed <= 0) animSpeed = 1f;
+            
+            float actualDelay = deathAnimLength / animSpeed;
+            
+            // Small buffer to ensure animation completes
+            actualDelay += 0.05f;
+            
+            StartCoroutine(CompleteDeathAfterDelay(actualDelay));
+        }
+        else
+        {
+            CompleteDeath();
+        }
+}
+
+    private IEnumerator CompleteDeathAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        CompleteDeath();
+    }
+
+    private void CompleteDeath()
+    {
+        // Notify WaveManager
+        if (WaveManager.Instance != null)
+        {
+            WaveManager.Instance.OnEnemyDied();
         }
         
         if (UpgradeManager.Instance != null)
@@ -418,14 +543,26 @@ public class EnemyHealth : MonoBehaviour, IPoolable
         gameObject.SetActive(false);
     }
 
+    private float GetAnimationLength(string animationName)
+    {
+        if (animator != null)
+        {
+            RuntimeAnimatorController ac = animator.runtimeAnimatorController;
+            AnimationClip[] clips = ac.animationClips;
+            foreach (AnimationClip clip in clips)
+            {
+                if (clip.name.ToLower().Contains(animationName.ToLower()))
+                {
+                    return clip.length;
+                }
+            }
+        }
+        return 0.3f;
+    }
+
     private void SummonMinions()
     {
         Debug.Log($"Summoner spawning {numberOfSummons} minions!");
-        
-        if (animator != null)
-        {
-            animator.SetTrigger("Die");
-        }
         
         if (summonedEnemyPrefab == null)
         {
@@ -445,6 +582,12 @@ public class EnemyHealth : MonoBehaviour, IPoolable
             if (minionHealth != null)
             {
                 activeMinionsCount++;
+                
+                if (WaveManager.Instance != null)
+                {
+                    WaveManager.Instance.OnMinionSpawned();
+                }
+                
                 Debug.Log($"Minion spawned. Total active minions: {activeMinionsCount}");
                 
                 minionHealth.OnDied += (diedMinion) => {
@@ -469,6 +612,22 @@ public class EnemyHealth : MonoBehaviour, IPoolable
     {
         ApplyStats();
         lastAttackTime = 0;
+        lastRangedAttackTime = 0;
+        isDetonating = false;
+        enabled = true;
+        
+        if (agent != null)
+        {
+            agent.enabled = true;
+            agent.isStopped = false;
+        }
+        
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = true;
+        
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = false;
+        
         gameObject.SetActive(true);
     }
 
@@ -481,5 +640,10 @@ public class EnemyHealth : MonoBehaviour, IPoolable
     {
         minion.OnDied -= HandleMinionDied;
         Debug.Log($"Minion died, remaining: {FindObjectsByType<EnemyHealth>(FindObjectsSortMode.None).Length}");
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        Debug.Log($"Collision on {gameObject.name} with {collision.gameObject.name}");
     }
 }

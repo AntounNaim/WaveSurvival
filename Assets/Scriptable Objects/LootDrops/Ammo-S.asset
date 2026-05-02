@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LootData
   lootName: Small Ammo
   lootIcon: {fileID: 0}
-  lootPrefab: {fileID: 2872596658775814052, guid: 10f10a39e9b42c646bbea515adfc6ac6, type: 3}
+  lootPrefab: {fileID: 2940726264340688120, guid: 30a20a8a04ee4e24a876d72e21f728f2, type: 3}
   lootType: 0
   ammoAmount: 15
   healAmount: 0
