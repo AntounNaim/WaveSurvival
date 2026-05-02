@@ -33,7 +33,9 @@ public class FloatingText : MonoBehaviour
     
     private void Update()
     {
-        remainingLife -= Time.deltaTime;
+        if (Time.timeScale == 0f) return;
+        
+        remainingLife -= Time.unscaledDeltaTime; // Use unscaled time
         
         if (remainingLife <= 0)
         {
@@ -41,12 +43,12 @@ public class FloatingText : MonoBehaviour
             return;
         }
         
-        // Float upward
+        // Float upward (using unscaled delta time so it doesn't freeze)
         Vector3 pos = transform.position;
-        pos.y += floatSpeed * Time.deltaTime;
+        pos.y += floatSpeed * Time.unscaledDeltaTime;
         transform.position = pos;
         
-        // Fade out after fadeStartTime
+        // Fade out
         if (remainingLife < fadeStartTime)
         {
             Color color = textComponent.color;

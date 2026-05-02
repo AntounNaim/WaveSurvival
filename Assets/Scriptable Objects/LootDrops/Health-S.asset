@@ -22,4 +22,4 @@ MonoBehaviour:
   damageUpgradeAmount: 0
   ammoCapacityUpgradeAmount: 0
   pickupVFX: {fileID: 0}
-  pickupSound: {fileID: 0}
+  pickupSound: {fileID: 8300000, guid: 23aacdbd1fc2d6641b0201fb3f091800, type: 3}

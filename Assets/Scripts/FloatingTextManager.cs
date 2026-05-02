@@ -23,7 +23,19 @@ public class FloatingTextManager : MonoBehaviour
         CreateNotificationPanel();
     }
     
-    public void ShowFloatingText(string message, Vector3 worldPosition, Color color)
+    public void ClearAllNotifications()
+    {
+        // Clear all active notifications
+        while (activeNotifications.Count > 0)
+        {
+            GameObject notif = activeNotifications.Dequeue();
+            if (notif != null)
+                Destroy(notif);
+        }
+        activeNotifications.Clear();
+    }
+
+        public void ShowFloatingText(string message, Vector3 worldPosition, Color color)
     {
         ShowFloatingText(message, color);
     }

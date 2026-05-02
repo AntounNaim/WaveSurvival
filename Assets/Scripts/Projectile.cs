@@ -23,6 +23,15 @@ public class Projectile : MonoBehaviour
             transform.position += direction * speed * Time.deltaTime;
         }
     }
+
+    private void Start()
+    {
+        int floorLayer = LayerMask.NameToLayer("Floor");
+        if (floorLayer != -1)
+        {
+            Physics.IgnoreLayerCollision(floorLayer, LayerMask.NameToLayer("Projectile"), true);
+        }
+        }
     
     private void OnTriggerEnter(Collider other)
     {

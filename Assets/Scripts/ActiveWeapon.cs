@@ -85,6 +85,16 @@ public class ActiveWeapon : MonoBehaviour
         float yawKick = Random.Range(-weaponData.recoilX, weaponData.recoilX);
         controller.ApplyRecoil(weaponData.recoilY, yawKick);
 
+        if (AudioManager.Instance != null)
+        {
+            if (weaponData.weaponName == "AR")
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.arShootSound, 0.5f);
+            else if (weaponData.weaponName == "Sniper")
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.rifleShootSound, 0.7f);
+            else if (weaponData.weaponName == "Pistol")
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.pistolShootSound, 0.2f);
+        }
+
         if (CrosshairManager.Instance != null)
         {
             CrosshairManager.Instance.AddSpread(0.2f);

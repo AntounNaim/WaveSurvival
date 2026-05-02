@@ -284,6 +284,11 @@ public class EnemyHealth : MonoBehaviour, IPoolable
         
         Debug.Log($"{enemyData.enemyName} DETONATED!");
 
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.enemyExploderSound, 0.8f);
+        }
+
         if (WaveManager.Instance != null)
         {
             WaveManager.Instance.OnEnemyDied();
@@ -427,6 +432,12 @@ public class EnemyHealth : MonoBehaviour, IPoolable
         return;
         }
         
+        // Play hit sound
+        if (AudioManager.Instance != null && AudioManager.Instance.enemyHitSound != null)
+        {
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.enemyHitSound, 0.5f);
+        }
+
         currentHealth -= damage;
         Debug.Log($"{gameObject.name} took {damage} damage! Health: {currentHealth}");
         
@@ -461,6 +472,11 @@ public class EnemyHealth : MonoBehaviour, IPoolable
         
         if (currentHealth > 0) return;
         
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.enemyDeathSound, 0.6f);
+        }
+
         // Disable everything immediately
         if (agent != null)
         {

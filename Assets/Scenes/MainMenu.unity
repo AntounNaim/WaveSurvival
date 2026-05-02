@@ -2622,6 +2622,64 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1953053721}
   m_CullTransparentMesh: 1
+--- !u!1 &2001177416
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2001177418}
+  - component: {fileID: 2001177417}
+  m_Layer: 0
+  m_Name: AudioManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2001177417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2001177416}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 950cea2a809abf443bea6f04f9fde4b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioManager
+  backgroundMusic: {fileID: 8300000, guid: 0a165295d905fa24c8987c7684bbd78d, type: 3}
+  ambientSound: {fileID: 8300000, guid: 458b302b77b8d7b4d938021e1b751fd1, type: 3}
+  arShootSound: {fileID: 8300000, guid: 241c546b5b3a0c54592e41b743b5115c, type: 3}
+  rifleShootSound: {fileID: 8300000, guid: 04e8bb41f6da3e7438bbaaea818ad2fe, type: 3}
+  pistolShootSound: {fileID: 8300000, guid: 0ff482c9b58ea8c498cd96f80302ea7c, type: 3}
+  enemyDeathSound: {fileID: 8300000, guid: 8c6aaf58ba5666849ad868ba63945331, type: 3}
+  enemyExploderSound: {fileID: 8300000, guid: 5f7b07f90a7bfab44803947a7869624a, type: 3}
+  enemyHitSound: {fileID: 0}
+  playerHurtSound: {fileID: 8300000, guid: 7a6915d64ff81874380cf07d4d81b536, type: 3}
+  pickupSound: {fileID: 0}
+  masterVolume: 1
+  musicVolume: 0.108
+  ambientVolume: 0.343
+  sfxVolume: 0.675
+--- !u!4 &2001177418
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2001177416}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -14.69444, y: 5.1186, z: -34.42285}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2086256631
 GameObject:
   m_ObjectHideFlags: 0
@@ -2872,3 +2930,4 @@ SceneRoots:
   - {fileID: 2086256632}
   - {fileID: 1043545150}
   - {fileID: 296576649}
+  - {fileID: 2001177418}

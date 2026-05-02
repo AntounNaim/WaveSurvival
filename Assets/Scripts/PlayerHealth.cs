@@ -31,6 +31,15 @@ public class PlayerHealth : MonoBehaviour
     {
         if (isInvincible || !IsAlive) return;
         
+        if (AudioManager.Instance != null && AudioManager.Instance.playerHurtSound != null)
+        {
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.playerHurtSound, 0.7f);
+        }
+        else
+        {
+            Debug.LogWarning("Player hurt sound not playing - AudioManager or sound clip missing");
+        }
+
         currentHealth -= damage;
         Debug.Log($"Player took {damage} damage! Health: {currentHealth}/{maxHealth}");
         

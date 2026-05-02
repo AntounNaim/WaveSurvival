@@ -52,6 +52,12 @@ public class ShopUI : MonoBehaviour
     
     public void OpenShop(int waveNumber)
     {
+
+        if (FloatingTextManager.Instance != null)
+        {
+            FloatingTextManager.Instance.ClearAllNotifications();
+        }
+
         // Get random upgrades - ONLY ONCE when shop opens
         currentUpgrades = upgradeManager.GetRandomUpgrades();
         
