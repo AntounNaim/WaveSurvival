@@ -15,7 +15,7 @@ MonoBehaviour:
   upgradeName: Explosive Bullets
   description: 
   icon: {fileID: 0}
-  baseCost: 1
+  baseCost: 600
   costIncreasePerPurchase: 0
   upgradeType: 8
   healthAmount: 0

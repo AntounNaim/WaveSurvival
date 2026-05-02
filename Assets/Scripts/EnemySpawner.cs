@@ -67,8 +67,13 @@ public class EnemySpawner : MonoBehaviour
         if (spawnPoints.Length == 0) return;
         
         Transform point = spawnPoints[Random.Range(0, spawnPoints.Length)];
+        Vector3 spawnPos = point.position;
+        
+        // Try a large offset to see if it's just not high enough
+        spawnPos.y += -0.2f;  // Increased from 0.8 to 3
+        
         int enemyIndex = GetWeightedRandomIndex();
-        EnemyHealth enemy = pools[enemyIndex].Get(point.position, point.rotation);
+        EnemyHealth enemy = pools[enemyIndex].Get(spawnPos, point.rotation);
         enemy.OnDied += HandleEnemyDied;
     }
 

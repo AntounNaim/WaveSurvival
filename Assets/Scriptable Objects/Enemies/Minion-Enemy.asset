@@ -15,7 +15,7 @@ MonoBehaviour:
   enemyName: Minion
   maxHealth: 1
   damage: 5
-  attackCooldown: 1
+  attackCooldown: 0.5
   attackRange: 1.5
   isRanged: 0
   projectilePrefab: {fileID: 0}

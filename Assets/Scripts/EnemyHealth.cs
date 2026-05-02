@@ -10,6 +10,7 @@ public class EnemyHealth : MonoBehaviour, IPoolable
     private Renderer enemyRenderer;
     private float lastAttackTime;
     private Transform player;
+    private Animator animator;
 
     public event Action<EnemyHealth> OnDied;
     public EnemyData Data => enemyData;
@@ -36,11 +37,39 @@ public class EnemyHealth : MonoBehaviour, IPoolable
         agent = GetComponent<NavMeshAgent>();
         enemyRenderer = GetComponentInChildren<Renderer>();
         projectileLauncher = GetComponent<ProjectileLauncher>();
+        animator = GetComponentInChildren<Animator>();
+
+        if (agent != null)
+        {
+            agent.updatePosition = true;
+            agent.updateRotation = true;
+        }
+        
+        if (animator != null)
+        {
+            animator.applyRootMotion = false;
+            Debug.Log($"Animator found on {animator.gameObject.name}");
+        }
+        else
+        {
+            Debug.LogError($"No Animator found in children of {gameObject.name}");
+        }
     }
 
     private void Start()
     {
         FindPlayer();
+
+        if (animator != null)
+        {
+            RuntimeAnimatorController ac = animator.runtimeAnimatorController;
+            AnimationClip[] clips = ac.animationClips;
+            Debug.Log($"Found {clips.Length} animations:");
+            foreach (AnimationClip clip in clips)
+            {
+                Debug.Log($"- {clip.name}");
+            }
+        }
     }
 
     private void OnEnable()
@@ -57,64 +86,93 @@ public class EnemyHealth : MonoBehaviour, IPoolable
     }
 
     private void Update()
-{
-    if (player == null)
     {
-        FindPlayer();
-        return;
-    }
-    
-    float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-    
-    // EXPLODER BEHAVIOR - always tries to get close and detonate
-    if (isExploder)
-    {
-        // Check if close enough to detonate
-        if (distanceToPlayer <= detonationDistance && !isDetonating)
+        if (player == null)
         {
-            Detonate();
+            FindPlayer();
             return;
         }
         
-        // Rush towards player
-        if (agent.isOnNavMesh && agent.enabled)
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        
+        // Update animator speed
+        if (animator != null)
         {
-            agent.SetDestination(player.position);
+            float speed = agent.velocity.magnitude;
+            animator.SetFloat("Speed", speed);
         }
         
-        // Speed boost when low health (under 50%)
-        if (agent != null && currentHealth <= enemyData.maxHealth / 2)
+        // EXPLODER BEHAVIOR
+        if (isExploder)
         {
-            agent.speed = enemyData.speed * 1.5f;
+            if (distanceToPlayer <= detonationDistance && !isDetonating)
+            {
+                Detonate();
+                return;
+            }
+            
+            if (agent.isOnNavMesh && agent.enabled)
+            {
+                agent.SetDestination(player.position);
+            }
+            return;
         }
         
-        return;
-    }
-    
-    // RANGED BEHAVIOR
-    if (isRanged)
-    {
-        if (distanceToPlayer <= enemyData.rangedAttackRange)
+        // RANGED BEHAVIOR
+        if (isRanged)
         {
-            if (Time.time >= lastRangedAttackTime + enemyData.attackCooldown)
+            bool canAttack = distanceToPlayer <= enemyData.rangedAttackRange;
+            
+            if (canAttack && Time.time >= lastRangedAttackTime + enemyData.attackCooldown)
             {
                 lastRangedAttackTime = Time.time;
                 PerformRangedAttack();
+                agent.ResetPath();
+                return;
+            }
+            
+            if (agent.isOnNavMesh && agent.enabled && distanceToPlayer > enemyData.rangedAttackRange * 0.7f)
+            {
+                agent.SetDestination(player.position);
+            }
+            else if (agent.isOnNavMesh && agent.enabled)
+            {
+                agent.ResetPath();
             }
         }
-        
-        if (agent.isOnNavMesh && agent.enabled && distanceToPlayer > enemyData.rangedAttackRange * 0.5f)
+        else // MELEE BEHAVIOR
         {
-            agent.SetDestination(player.position);
-        }
-        else if (agent.isOnNavMesh && agent.enabled)
-        {
-            agent.ResetPath();
+            // DISTANCE-BASED DAMAGE (most reliable)
+            if (distanceToPlayer <= enemyData.attackRange)
+            {
+                // Stop moving when in attack range
+                if (agent.isOnNavMesh && agent.enabled)
+                {
+                    agent.ResetPath();
+                }
+                
+                // Deal damage on cooldown
+                if (Time.time >= lastAttackTime + enemyData.attackCooldown)
+                {
+                    lastAttackTime = Time.time;
+                    DealDamageToPlayer();
+                }
+            }
+            else
+            {
+                // Move toward player when outside attack range
+                if (agent.isOnNavMesh && agent.enabled)
+                {
+                    agent.SetDestination(player.position);
+                }
+            }
         }
     }
-    else // MELEE BEHAVIOR
+
+    // COLLISION-BASED DAMAGE
+    private void OnCollisionStay(Collision collision)
     {
-        if (distanceToPlayer <= enemyData.attackRange)
+        if (collision.gameObject.CompareTag("Player"))
         {
             if (Time.time >= lastAttackTime + enemyData.attackCooldown)
             {
@@ -122,103 +180,121 @@ public class EnemyHealth : MonoBehaviour, IPoolable
                 DealDamageToPlayer();
             }
         }
-        
-        if (agent.isOnNavMesh && agent.enabled)
-        {
-            agent.SetDestination(player.position);
-        }
     }
-}
 
-private bool HasLineOfSight()
-{
-    Vector3 directionToPlayer = (player.position - transform.position).normalized;
-    RaycastHit hit;
-    
-    // Adjust ray start position to enemy's head/chest height
-    Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-    
-    if (Physics.Raycast(rayStart, directionToPlayer, out hit, enemyData.rangedAttackRange))
+    private void OnTriggerStay(Collider other)
     {
-        return hit.collider.CompareTag("Player");
-    }
-    
-    return false;
-}
-
-private void Detonate()
-{
-    if (isDetonating) return;
-    
-    isDetonating = true;
-    
-    Debug.Log($"{enemyData.enemyName} DETONATED!");
-    
-    // Damage player if in radius
-    if (player != null)
-    {
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-        if (distanceToPlayer <= explosionRadius)
+        if (other.CompareTag("Player"))
         {
-            PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
-            if (playerHealth != null)
+            if (Time.time >= lastAttackTime + enemyData.attackCooldown)
             {
-                playerHealth.TakeDamage(Mathf.RoundToInt(explosionDamage));
-                Debug.Log($"Explosion dealt {explosionDamage} damage to player!");
+                lastAttackTime = Time.time;
+                DealDamageToPlayer();
             }
         }
     }
-    
-    // Damage nearby enemies (optional - makes chain reactions)
-    Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
-    foreach (var hit in hitColliders)
+
+    private bool HasLineOfSight()
     {
-        EnemyHealth nearbyEnemy = hit.GetComponent<EnemyHealth>();
-        if (nearbyEnemy != null && nearbyEnemy != this)
+        Vector3 directionToPlayer = (player.position - transform.position).normalized;
+        RaycastHit hit;
+        Vector3 rayStart = transform.position + Vector3.up * 0.5f;
+        
+        if (Physics.Raycast(rayStart, directionToPlayer, out hit, enemyData.rangedAttackRange))
         {
-            nearbyEnemy.TakeDamage(50); // Chain damage
-            Debug.Log($"Explosion damaged nearby enemy!");
+            return hit.collider.CompareTag("Player");
+        }
+        return false;
+    }
+
+    private void Detonate()
+    {
+        if (isDetonating) return;
+        
+        isDetonating = true;
+        
+        if (animator != null)
+        {
+            animator.SetTrigger("Die");
+        }
+        
+        Debug.Log($"{enemyData.enemyName} DETONATED!");
+        
+        if (player != null)
+        {
+            float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+            if (distanceToPlayer <= explosionRadius)
+            {
+                PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
+                if (playerHealth != null)
+                {
+                    playerHealth.TakeDamage(Mathf.RoundToInt(explosionDamage));
+                    Debug.Log($"Explosion dealt {explosionDamage} damage to player!");
+                }
+            }
+        }
+        
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
+        foreach (var hit in hitColliders)
+        {
+            EnemyHealth nearbyEnemy = hit.GetComponent<EnemyHealth>();
+            if (nearbyEnemy != null && nearbyEnemy != this)
+            {
+                nearbyEnemy.TakeDamage(50);
+                Debug.Log($"Explosion damaged nearby enemy!");
+            }
+        }
+        
+        if (explosionVFX != null)
+        {
+            GameObject explosion = Instantiate(explosionVFX, transform.position, Quaternion.identity);
+            Destroy(explosion, 1.5f);
+        }
+        
+        OnDied?.Invoke(this);
+        gameObject.SetActive(false);
+    }
+
+    private void PerformRangedAttack()
+    {
+        if (animator != null)
+        {
+            animator.SetTrigger("Shoot");
+        }
+        
+        if (projectileLauncher != null)
+        {
+            projectileLauncher.Shoot(enemyData.damage, player.position);
+            Debug.Log($"{enemyData.enemyName} shot at player!");
+        }
+        
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.ResetPath();
         }
     }
-    
-    // Spawn explosion VFX
-    if (explosionVFX != null)
-{
-    GameObject explosion = Instantiate(explosionVFX, transform.position, Quaternion.identity);
-    Destroy(explosion, 1.5f); // Force destroy after 1.5 seconds
-}
-    
-    // Die without dropping loot (optional)
-    OnDied?.Invoke(this);
-    gameObject.SetActive(false);
-}
-
-private void PerformRangedAttack()
-{
-    Debug.Log($"PerformRangedAttack called! ProjectileLauncher exists: {projectileLauncher != null}");
-    
-    if (projectileLauncher != null)
-    {
-        projectileLauncher.Shoot(enemyData.damage, player.position);
-        Debug.Log($"{enemyData.enemyName} shot at player!");
-    }
-    else
-    {
-        Debug.LogError("ProjectileLauncher is NULL!");
-    }
-}
 
     private void DealDamageToPlayer()
     {
+        if (animator != null)
+        {
+            animator.SetTrigger("Attack");
+        }
+        
         PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
         if (playerHealth != null)
         {
             playerHealth.TakeDamage(enemyData.damage);
             Debug.Log($"{enemyData.enemyName} attacked! Distance: {Vector3.Distance(transform.position, player.position)}");
         }
+        
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.ResetPath();
+        }
     }
 
-        private void ApplyStats()
+    private void ApplyStats()
     {
         if (enemyData == null)
         {
@@ -226,7 +302,6 @@ private void PerformRangedAttack()
             return;
         }
         
-        // Store base health for scaling
         int baseHealth = enemyData.maxHealth;
         if (WaveManager.Instance != null)
         {
@@ -251,14 +326,12 @@ private void PerformRangedAttack()
         
         transform.localScale = Vector3.one * enemyData.scale;
         
-        // Ranged setup
         isRanged = enemyData.isRanged;
         if (isRanged && projectileLauncher == null)
         {
             projectileLauncher = gameObject.AddComponent<ProjectileLauncher>();
         }
         
-        // Exploder setup
         isExploder = enemyData.isExploder;
         if (isExploder)
         {
@@ -268,7 +341,6 @@ private void PerformRangedAttack()
             detonationDistance = enemyData.detonationDistance;
         }
         
-        // SUMMONER SETUP
         isSummoner = enemyData.isSummoner;
         if (isSummoner)
         {
@@ -284,6 +356,11 @@ private void PerformRangedAttack()
         
         currentHealth -= damage;
         Debug.Log($"{gameObject.name} took {damage} damage! Health: {currentHealth}");
+        
+        if (animator != null)
+        {
+            animator.SetTrigger("Hit");
+        }
         
         if (enemyRenderer != null)
         {
@@ -305,22 +382,25 @@ private void PerformRangedAttack()
         }
     }
 
-        private void Die()
+    private void Die()
     {
         Debug.Log($"{gameObject.name} died!");
-        // Notify UpgradeManager for leech rounds
+        
+        if (animator != null)
+        {
+            animator.SetTrigger("Die");
+        }
+        
         if (UpgradeManager.Instance != null)
         {
             UpgradeManager.Instance.OnEnemyKilled(transform.position);
         }
         
-        // SUMMON ENEMIES ON DEATH
         if (isSummoner && !isDetonating)
         {
             SummonMinions();
         }
         
-        // Don't drop loot or give score if exploder already detonated
         if (!isDetonating)
         {
             if (ScoreManager.Instance != null && enemyData != null)
@@ -338,9 +418,14 @@ private void PerformRangedAttack()
         gameObject.SetActive(false);
     }
 
-        private void SummonMinions()
+    private void SummonMinions()
     {
         Debug.Log($"Summoner spawning {numberOfSummons} minions!");
+        
+        if (animator != null)
+        {
+            animator.SetTrigger("Die");
+        }
         
         if (summonedEnemyPrefab == null)
         {
@@ -362,7 +447,6 @@ private void PerformRangedAttack()
                 activeMinionsCount++;
                 Debug.Log($"Minion spawned. Total active minions: {activeMinionsCount}");
                 
-                // When this minion dies, decrement the count
                 minionHealth.OnDied += (diedMinion) => {
                     activeMinionsCount--;
                     Debug.Log($"Minion died. Remaining minions: {activeMinionsCount}");
@@ -373,7 +457,6 @@ private void PerformRangedAttack()
 
     private int GetMinionTypeIndex()
     {
-        // Get the index of the minion enemy type from the spawner
         EnemySpawner spawner = FindFirstObjectByType<EnemySpawner>();
         if (spawner != null)
         {
@@ -393,10 +476,10 @@ private void PerformRangedAttack()
     {
         OnDied = null;
     }
-        private void HandleMinionDied(EnemyHealth minion)
+    
+    private void HandleMinionDied(EnemyHealth minion)
     {
         minion.OnDied -= HandleMinionDied;
-        // The ObjectPool will handle returning, but we just need to track
         Debug.Log($"Minion died, remaining: {FindObjectsByType<EnemyHealth>(FindObjectsSortMode.None).Length}");
     }
 }

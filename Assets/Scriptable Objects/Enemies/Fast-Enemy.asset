@@ -15,7 +15,7 @@ MonoBehaviour:
   enemyName: Fast
   maxHealth: 1
   damage: 10
-  attackCooldown: 0.5
+  attackCooldown: 1
   attackRange: 1.5
   isRanged: 0
   projectilePrefab: {fileID: 0}

@@ -12,3 +12,8 @@
 .vs/
 .DS_Store
 Thumbs.db
+Library/
+Temp/
+Logs/
+obj/
+UserSettings/
